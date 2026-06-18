@@ -76,29 +76,18 @@ export default function PresentationMode({
 
   if (!slide) return null;
 
-  const cifraSize = 14 * fontScale;
-  const letraSize = `clamp(${22 * fontScale}px, ${4 * fontScale}vw, ${36 * fontScale}px)`;
-
   return (
-    <div className="present-shell" style={{ fontFamily: FONT }}>
+    <div
+      className="present-shell"
+      style={{ fontFamily: FONT, "--present-scale": fontScale }}
+    >
       <header className="present-header">
         <div className="present-header__top">
         <div style={{ minWidth: 0, flex: 1 }}>
           {slide.songName && (
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "#f5f5f5",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {slide.songName}
-            </div>
+            <div className="present-title">{slide.songName}</div>
           )}
-          <div style={{ fontSize: 12, color: "#aaa", marginTop: 2 }}>
+          <div className="present-meta">
             <span style={{ color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
               {slide.label}
             </span>
@@ -149,37 +138,9 @@ export default function PresentationMode({
         </div>
       )}
 
-      <main
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: showCifra ? "20px 16px 88px" : "32px 24px 88px",
-        }}
-      >
-        <div style={{ maxWidth: showCifra ? 720 : 640, margin: "0 auto" }}>
-          <pre
-            style={
-              showCifra
-                ? {
-                    fontFamily: '"Roboto Mono", Consolas, "Courier New", monospace',
-                    fontSize: cifraSize,
-                    lineHeight: 1.5,
-                    textAlign: "left",
-                    whiteSpace: "pre",
-                    margin: 0,
-                    color: "#f5f5f5",
-                  }
-                : {
-                    fontFamily: FONT,
-                    fontSize: letraSize,
-                    lineHeight: 1.45,
-                    textAlign: "center",
-                    whiteSpace: "pre-wrap",
-                    margin: 0,
-                    color: "#f5f5f5",
-                  }
-            }
-          >
+      <main className="present-main">
+        <div className={`present-content ${showCifra ? "present-content--cifra" : "present-content--letra"}`}>
+          <pre className={`present-text ${showCifra ? "present-text--cifra" : "present-text--letra"}`}>
             {displayText}
           </pre>
         </div>
