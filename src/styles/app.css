@@ -640,6 +640,30 @@ textarea.inp {
   white-space: pre-wrap;
 }
 
+.cifra-line {
+  display: block;
+}
+
+.cifra-line--chords {
+  color: #b8c0cc;
+}
+
+.cifra-line--lyrics {
+  color: #e8ecf1;
+}
+
+.cifra-line--marker {
+  color: #e8c96a;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.cifra-chord {
+  color: #ff9a3c;
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(255, 119, 0, 0.35);
+}
+
 .present-text--letra {
   font-family: var(--font);
   font-size: calc(clamp(14px, 3.6vw, 18px) * var(--present-scale, 1));

@@ -149,6 +149,33 @@ export function isChordOnlyLine(line) {
   return stripped === "";
 }
 
+/** Quebra uma linha em trechos de texto e acordes (para renderização com cor). */
+export function splitLineByChords(line) {
+  const parts = [];
+  CHORD_RE.lastIndex = 0;
+  let last = 0;
+  let m;
+  while ((m = CHORD_RE.exec(line)) !== null) {
+    if (m.index > last) {
+      parts.push({ type: "text", value: line.slice(last, m.index) });
+    }
+    parts.push({ type: "chord", value: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (parts.length === 0) {
+    return [{ type: "text", value: line }];
+  }
+  if (last < line.length) {
+    parts.push({ type: "text", value: line.slice(last) });
+  }
+  return parts;
+}
+
+export function isSectionMarkerLine(line) {
+  const t = line.trim();
+  return /^\[[^\]]+\]$/.test(t) || /^\([^)]+\)$/.test(t);
+}
+
 export function stripChordsFromLyrics(lyrics) {
   if (!lyrics) return lyrics;
   return lyrics

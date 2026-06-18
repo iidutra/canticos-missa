@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { C, FONT } from "../constants.js";
 import { hasChords, parseKey, stripChordsFromLyrics } from "../lib/transpose.js";
+import CifraView from "./CifraView.jsx";
 
 const CC_ORANGE = "#FF7700";
 const BG = "#0f1419";
@@ -140,9 +141,14 @@ export default function PresentationMode({
 
       <main className="present-main">
         <div className={`present-content ${showCifra ? "present-content--cifra" : "present-content--letra"}`}>
-          <pre className={`present-text ${showCifra ? "present-text--cifra" : "present-text--letra"}`}>
-            {displayText}
-          </pre>
+          {showCifra ? (
+            <CifraView
+              text={displayText}
+              className={`present-text present-text--cifra`}
+            />
+          ) : (
+            <pre className="present-text present-text--letra">{displayText}</pre>
+          )}
         </div>
       </main>
 
