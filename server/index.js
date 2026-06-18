@@ -6,6 +6,7 @@ import { initDb, importCalendarFileToDbIfEmpty } from "./db.js";
 import storageRouter from "./routes/storage.js";
 import liturgiaRouter from "./routes/liturgia.js";
 import cifraclubRouter from "./routes/cifraclub.js";
+import importRouter from "./routes/import.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -28,6 +29,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/storage", storageRouter);
 app.use("/api/liturgia", liturgiaRouter);
 app.use("/api/cifraclub", cifraclubRouter);
+app.use("/api/import", importRouter);
 
 app.use(express.static(DIST, { maxAge: "1d", index: false }));
 

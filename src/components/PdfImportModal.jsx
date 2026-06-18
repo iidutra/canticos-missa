@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { C, FONT, SECTIONS } from "../constants.js";
-import { parsePdfFile, parsedToRepertoire, parseFilenameMeta } from "../lib/pdf-import.js";
+import { parseDocumentFile, parsedToRepertoire, parseFilenameMeta, ACCEPT_DOCUMENTS } from "../lib/pdf-import.js";
 import { hasChords } from "../lib/transpose.js";
 
 export default function PdfImportModal({ open, onClose, onImport, defaultTitle, defaultDate }) {
@@ -45,13 +45,13 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
     setFileName(file.name);
     const fromName = parseFilenameMeta(file.name);
     try {
-      const result = await parsePdfFile(file);
+      const result = await parseDocumentFile(file);
       setParsed(result);
-      setMissTitle(result.missTitle || fromName.missTitle || defaultTitle || file.name.replace(/\.pdf$/i, ""));
+      setMissTitle(result.missTitle || fromName.missTitle || defaultTitle || file.name.replace(/\.(pdf|docx?)$/i, ""));
       setMissDate(result.missDate || fromName.missDate || defaultDate || "");
       setSectionMap({});
     } catch (err) {
-      setError(err.message || "Não foi possível ler o PDF");
+      setError(err.message || "Não foi possível ler o documento");
       setParsed(null);
     }
     setBusy(false);
@@ -76,14 +76,14 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
     <div className="modal-overlay" onClick={handleClose} role="dialog" aria-modal="true" aria-labelledby="pdf-import-title">
       <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-panel__head">
-          <h2 id="pdf-import-title" style={{ margin: "0 0 4px", fontSize: 17, color: C.nav, fontFamily: FONT }}>Importar PDF de cifras</h2>
+          <h2 id="pdf-import-title" style={{ margin: "0 0 4px", fontSize: 17, color: C.nav, fontFamily: FONT }}>Importar documento de cifras</h2>
           <p style={{ margin: "0 0 12px", fontSize: 12, color: C.textMuted, lineHeight: 1.45, fontFamily: FONT }}>
-            O app detecta seções litúrgicas (Entrada, Glória, Comunhão…) e separa cada música conforme o PDF.
+            PDF, DOC ou DOCX — o app detecta seções litúrgicas (Entrada, Glória, Comunhão…) e separa cada música.
           </p>
         </div>
 
         <div className="modal-panel__body">
-          <input ref={fileRef} type="file" accept=".pdf,application/pdf" style={{ display: "none" }} onChange={handleFile} />
+          <input ref={fileRef} type="file" accept={ACCEPT_DOCUMENTS} style={{ display: "none" }} onChange={handleFile} />
 
           <button
             type="button"
@@ -98,7 +98,7 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
               fontFamily: FONT,
             }}
           >
-            {busy ? "Lendo PDF…" : fileName ? `Trocar arquivo (${fileName})` : "Escolher arquivo PDF"}
+            {busy ? "Lendo documento…" : fileName ? `Trocar arquivo (${fileName})` : "Escolher PDF, DOC ou DOCX"}
           </button>
 
           {error && (
@@ -126,7 +126,7 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
 
               {parsed.sections.length === 0 ? (
                 <p style={{ fontSize: 13, color: C.danger, fontFamily: FONT }}>
-                  Nenhuma seção litúrgica encontrada. Verifique se o PDF usa títulos como Entrada, Glória, Comunhão…
+                  Nenhuma seção litúrgica encontrada. Verifique se o documento usa títulos como Entrada, Glória, Comunhão…
                 </p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>

@@ -349,7 +349,7 @@ export default function App() {
       if (missTitle) setRepMissTitle(missTitle);
     }
     switchTab("build");
-    flash(`${sectionCount} seção(ões) importada(s) do PDF!`);
+    flash(`${sectionCount} seção(ões) importada(s) do documento!`);
   };
 
   const handleSelectMiss = ({ date, title, slug }) => {
@@ -643,7 +643,7 @@ export default function App() {
               <span className="page-toolbar__meta">{cnt} seção(ões) preenchida(s)</span>
               <div className="action-grid">
                 <button type="button" className="btn btn-sm" onClick={() => openPresentation()} disabled={!cnt} style={sm(cnt ? C.nav : "#eee", cnt ? C.navText : "#aaa")}>▶ Apresentar</button>
-                <button type="button" className="btn btn-sm btn--ghost" onClick={() => openPdfImport()}>Importar PDF</button>
+                <button type="button" className="btn btn-sm btn--ghost" onClick={() => openPdfImport()}>Importar doc</button>
                 <button type="button" className="btn btn-sm btn--ghost" onClick={() => importRepRef.current?.click()}>Importar JSON</button>
                 <button type="button" className="btn btn-sm btn--ghost" onClick={() => downloadJson({ sections }, "repertorio-atual.json")}>Exportar</button>
                 <button type="button" className="btn btn-sm btn--ghost" onClick={() => { setCur(emptyRepertoire()); setSecQ({}); setSecA({}); setSecFallback({}); flash("Limpo!"); }}>Limpar tudo</button>

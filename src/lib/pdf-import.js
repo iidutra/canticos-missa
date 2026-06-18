@@ -111,9 +111,9 @@ function isLikelySongTitle(line, nextLine) {
   return false;
 }
 
-/** Extrai data e título a partir do nome do arquivo PDF */
+/** Extrai data e título a partir do nome do arquivo */
 export function parseFilenameMeta(filename) {
-  const base = (filename || "").replace(/\.pdf$/i, "").trim();
+  const base = (filename || "").replace(/\.(pdf|docx?)$/i, "").trim();
   const dateMatch = base.match(/(\d{1,2})[-_/](\d{1,2})[-_/](\d{4})/);
   const missDate = dateMatch
     ? `${dateMatch[1].padStart(2, "0")}/${dateMatch[2].padStart(2, "0")}/${dateMatch[3]}`
@@ -121,6 +121,17 @@ export function parseFilenameMeta(filename) {
   const missTitle = base.replace(/\s*\d{1,2}[-_/]\d{1,2}[-_/]\d{4}\s*/, " ").trim();
   return { missTitle, missDate };
 }
+
+export function documentKind(filename) {
+  const n = (filename || "").toLowerCase();
+  if (n.endsWith(".pdf")) return "pdf";
+  if (n.endsWith(".docx")) return "docx";
+  if (n.endsWith(".doc")) return "doc";
+  return null;
+}
+
+export const ACCEPT_DOCUMENTS =
+  ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 export function parsePdfText(text) {
   const rawLines = text.replace(/^\uFEFF/, "").trimStart().split("\n");
@@ -352,8 +363,46 @@ export async function extractTextFromPdf(file) {
   return pageTexts.join("\n");
 }
 
-export async function parsePdfFile(file) {
-  const text = await extractTextFromPdf(file);
+export async function extractTextFromDocx(file) {
+  const mammoth = await import("mammoth");
+  const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+  return value;
+}
+
+export async function extractTextFromWordApi(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch("/api/import/extract-text", { method: "POST", body: fd });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.error || "Falha ao ler documento Word");
+  }
+  const { text } = await r.json();
+  return text;
+}
+
+export async function extractTextFromDocument(file) {
+  const kind = documentKind(file.name);
+  if (!kind) throw new Error("Formato não suportado. Use PDF, DOC ou DOCX.");
+
+  if (kind === "pdf") return extractTextFromPdf(file);
+
+  if (kind === "docx") {
+    try {
+      const text = await extractTextFromDocx(file);
+      if (text?.trim()) return text;
+    } catch {}
+    return extractTextFromWordApi(file);
+  }
+
+  return extractTextFromWordApi(file);
+}
+
+export async function parseDocumentFile(file) {
+  const text = await extractTextFromDocument(file);
   const parsed = parsePdfText(text);
   return { ...parsed, rawLength: text.length, pageCount: text.split("\n\n").length };
 }
+
+/** @deprecated use parseDocumentFile */
+export const parsePdfFile = parseDocumentFile;

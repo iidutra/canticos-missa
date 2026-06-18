@@ -272,7 +272,7 @@ export default function LiturgyDashboard({ onUseSong, onImportPdf, onSelectMiss,
                   fontFamily: FONT,
                 }}
               >
-                Importar PDF de cifras desta missa
+                Importar documento de cifras desta missa
               </button>
             )}
           </div>
