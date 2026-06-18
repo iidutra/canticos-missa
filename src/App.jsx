@@ -16,6 +16,12 @@ import {
   syncManualEdit,
   hasChords,
 } from "./lib/transpose.js";
+import {
+  ORACOES_PROPRIAS,
+  getOracaoEucaristica,
+  isLiturgicalSection,
+  sectionPlaceholder,
+} from "./lib/oracoes-liturgicas.js";
 
 const CIFRA_PLACEHOLDER = ` D             G
 Senhor, se Tu me chamas
@@ -358,6 +364,73 @@ export default function App() {
     setRepMpmSlug(slug || "");
   };
 
+  const useOracao = (secId, { text, songName }) => {
+    if (!text?.trim()) {
+      flash("Oração indisponível.", true);
+      return;
+    }
+    const label = songName || SECTIONS.find((s) => s.id === secId)?.label || "Oração";
+    if (secId.startsWith("oe")) {
+      const next = { ...sections };
+      for (const id of ["oe1", "oe2", "oe3", "oe4", "oe5"]) {
+        if (id !== secId && next[id]) {
+          next[id] = { ...next[id], included: false };
+        }
+      }
+      next[secId] = initBlockWithContent({ included: true, songName: label, lyrics: text, key: "" });
+      setCur(next);
+    } else {
+      upd(secId, {
+        included: true,
+        lyrics: text,
+        songName: label,
+        baseLyrics: text,
+        baseKey: "",
+        semitones: 0,
+      });
+    }
+    setExpanded(secId);
+    switchTab("build");
+    flash(`"${label}" carregada na Montagem`);
+  };
+
+  const useOracoesProprias = (oracoesData) => {
+    if (!oracoesData) return;
+    let next = { ...sections };
+    let loaded = 0;
+    for (const item of ORACOES_PROPRIAS) {
+      const text = oracoesData[item.cnbbKey];
+      if (!text?.trim()) continue;
+      next[item.id] = initBlockWithContent({
+        included: true,
+        songName: item.label,
+        lyrics: text,
+        key: "",
+      });
+      loaded += 1;
+    }
+    if (!loaded) {
+      flash("Nenhuma oração própria disponível para esta data.", true);
+      return;
+    }
+    setCur(next);
+    switchTab("build");
+    flash(`${loaded} oração(ões) do dia carregadas na Montagem`);
+  };
+
+  const loadOeTemplate = async (secId) => {
+    try {
+      const oe = await getOracaoEucaristica(secId);
+      if (!oe?.text) {
+        flash("Modelo indisponível.", true);
+        return;
+      }
+      useOracao(secId, { text: oe.text, songName: oe.label });
+    } catch {
+      flash("Erro ao carregar Oração Eucarística.", true);
+    }
+  };
+
   const useSuggestedSong = async (secId, rawName) => {
     const name = cleanSongName(rawName);
     setSecQ((prev) => ({ ...prev, [secId]: name }));
@@ -633,6 +706,8 @@ export default function App() {
             onUseSong={useSuggestedSong}
             onImportPdf={openPdfImport}
             onSelectMiss={handleSelectMiss}
+            onUseOracao={useOracao}
+            onUseOracoesProprias={useOracoesProprias}
             savedReps={savedReps}
           />
         )}
@@ -655,6 +730,7 @@ export default function App() {
               const open = expanded === sec.id;
               const has = d.lyrics?.trim();
               const isBusy = secBusy === sec.id;
+              const liturgical = isLiturgicalSection(sec);
 
               return (
                 <div key={sec.id} className={`section-card${d.included && has ? " section-card--filled" : ""}`}>
@@ -673,6 +749,28 @@ export default function App() {
 
                   {open && (
                     <div className="section-card__body">
+                      {liturgical ? (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: C.search, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                            {sec.kind === "oe" ? "📖 Oração Eucarística" : "📖 Oração litúrgica"}
+                          </div>
+                          {sec.kind === "oe" && (
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => loadOeTemplate(sec.id)}
+                              style={{ ...sm(C.nav, C.navText), marginBottom: 8 }}
+                            >
+                              Carregar modelo {sec.label}
+                            </button>
+                          )}
+                          <p style={{ fontSize: 11, color: C.textMuted, margin: "0 0 8px", lineHeight: 1.4 }}>
+                            {sec.kind === "oe"
+                              ? "Pe: celebrante · T: assembleia. Inclua o Prefácio do dia. Use na apresentação para acompanhar a liturgia eucarística."
+                              : "Carregue do calendário (aba Início) ou cole o texto do missal."}
+                          </p>
+                        </div>
+                      ) : (
                       <div className="search-box">
                         <div style={{ fontSize: 11, fontWeight: 600, color: C.search, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>🔍 Buscar no Cifra Club</div>
                         <div className="search-box__fields">
@@ -682,13 +780,15 @@ export default function App() {
                         </div>
                         <FallbackLink url={secFallback[sec.id]} />
                       </div>
+                      )}
                       <input
                         className="inp"
                         value={d.songName || ""}
                         onChange={(e) => upd(sec.id, { songName: e.target.value })}
-                        placeholder="Nome da música (no folheto/apresentação)"
+                        placeholder={liturgical ? "Título (opcional)" : "Nome da música (no folheto/apresentação)"}
                         style={{ ...inp, marginBottom: 8 }}
                       />
+                      {!liturgical && (
                       <TransposeControls
                         keyLabel={d.key}
                         semitones={d.semitones ?? 0}
@@ -700,6 +800,8 @@ export default function App() {
                         onSelectKey={(semi) => setSectionToKey(sec.id, semi)}
                         onReset={() => resetSectionTranspose(sec.id)}
                       />
+                      )}
+                      {!liturgical && (
                       <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
                         <label className="label-sm" style={{ marginBottom: 0, flexShrink: 0 }}>Tom:</label>
                         <input
@@ -710,7 +812,8 @@ export default function App() {
                           style={inp}
                         />
                       </div>
-                      <textarea className="inp" value={d.lyrics} onChange={(e) => upd(sec.id, { lyrics: e.target.value })} placeholder={CIFRA_PLACEHOLDER} style={{ ...inp, minHeight: 180, ...cifraStyle(d.lyrics) }} />
+                      )}
+                      <textarea className="inp" value={d.lyrics} onChange={(e) => upd(sec.id, { lyrics: e.target.value })} placeholder={sectionPlaceholder(sec) || CIFRA_PLACEHOLDER} style={{ ...inp, minHeight: liturgical ? 240 : 180, ...cifraStyle(d.lyrics) }} />
                       <div className="toolbar" style={{ marginTop: 8 }}>
                         <button type="button" className="btn btn-sm" disabled={!has} onClick={() => saveSectionToLib(sec.id)} style={sm(has ? C.goldLight : "#eee", has ? C.nav : "#aaa")}>Salvar na biblioteca</button>
                         <button type="button" className="btn btn-sm btn--ghost" disabled={!has} onClick={() => { upd(sec.id, { lyrics: "", songName: "", key: "", baseLyrics: "", baseKey: "", semitones: 0 }); setSecFallback((prev) => ({ ...prev, [sec.id]: null })); }}>Limpar</button>

@@ -7,6 +7,12 @@ import {
   monthGrid,
   readingTitle,
 } from "../lib/liturgia.js";
+import {
+  ORACOES_EUCARISTICAS_IDS,
+  ORACOES_PROPRIAS,
+  extractOracoesFromMissa,
+  fetchOracoesEucaristicas,
+} from "../lib/oracoes-liturgicas.js";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS = [
@@ -14,7 +20,7 @@ const MONTHS = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-export default function LiturgyDashboard({ onUseSong, onImportPdf, onSelectMiss, savedReps = [] }) {
+export default function LiturgyDashboard({ onUseSong, onImportPdf, onSelectMiss, onUseOracao, onUseOracoesProprias, savedReps = [] }) {
   const [calendar, setCalendar] = useState({});
   const [meta, setMeta] = useState(null);
   const [upcoming, setUpcoming] = useState([]);
@@ -26,6 +32,15 @@ export default function LiturgyDashboard({ onUseSong, onImportPdf, onSelectMiss,
   const [loadingMass, setLoadingMass] = useState(false);
   const [error, setError] = useState(null);
   const [openReading, setOpenReading] = useState("evangelho");
+  const [openOracao, setOpenOracao] = useState("coleta");
+  const [openOe, setOpenOe] = useState("oe2");
+  const [oeTexts, setOeTexts] = useState(null);
+
+  useEffect(() => {
+    fetchOracoesEucaristicas()
+      .then(setOeTexts)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -77,6 +92,19 @@ export default function LiturgyDashboard({ onUseSong, onImportPdf, onSelectMiss,
     () => savedReps.filter((r) => r.missDate === selectedDate),
     [savedReps, selectedDate]
   );
+
+  const oracoes = useMemo(() => extractOracoesFromMissa(missa), [missa]);
+
+  const oracaoTabs = useMemo(() => {
+    if (!oracoes) return [];
+    return [
+      { key: "coleta", label: "Coleta", text: oracoes.coleta },
+      { key: "oferendas", label: "Oferendas", text: oracoes.oferendas },
+      { key: "comunhao", label: "Pós-comunhão", text: oracoes.comunhao },
+      { key: "antifona_entrada", label: "Ant. entrada", text: oracoes.antifonaEntrada },
+      { key: "antifona_comunhao", label: "Ant. comunhão", text: oracoes.antifonaComunhao },
+    ].filter((t) => t.text?.trim());
+  }, [oracoes]);
 
   const shiftMonth = (delta) => {
     const d = new Date(viewYear, viewMonth + delta, 1);
@@ -315,6 +343,139 @@ export default function LiturgyDashboard({ onUseSong, onImportPdf, onSelectMiss,
                     </p>
                   </div>
                 ))}
+            </div>
+          )}
+
+          {oracaoTabs.length > 0 && (
+            <div className="card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700, color: C.nav, margin: 0 }}>Orações da Missa</h3>
+                {onUseOracoesProprias && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => onUseOracoesProprias(oracoes)}
+                    style={{
+                      background: C.goldLight,
+                      color: C.nav,
+                      border: `1px solid ${C.gold}`,
+                      fontFamily: FONT,
+                    }}
+                  >
+                    Carregar todas na Montagem
+                  </button>
+                )}
+              </div>
+              <div className="reading-tabs">
+                {oracaoTabs.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className="chip"
+                    onClick={() => setOpenOracao(t.key)}
+                    style={{
+                      padding: "5px 10px",
+                      minHeight: 36,
+                      background: openOracao === t.key ? C.gold : C.goldLight,
+                      color: openOracao === t.key ? C.nav : C.text,
+                      border: "none",
+                      fontFamily: FONT,
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {oracaoTabs
+                .filter((t) => t.key === openOracao)
+                .map((t) => (
+                  <div key={t.key}>
+                    <p style={{ margin: "0 0 8px", fontSize: 13, lineHeight: 1.55, color: C.text, whiteSpace: "pre-wrap" }}>
+                      {t.text}
+                    </p>
+                    {onUseOracao && t.key.startsWith("antifona_") ? null : onUseOracao && ORACOES_PROPRIAS.find((o) => o.cnbbKey === t.key) ? (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() =>
+                          onUseOracao(
+                            ORACOES_PROPRIAS.find((o) => o.cnbbKey === t.key).id,
+                            { text: t.text, songName: t.label }
+                          )
+                        }
+                        style={{
+                          background: C.successBg,
+                          color: C.success,
+                          border: `1px solid ${C.success}44`,
+                          fontFamily: FONT,
+                        }}
+                      >
+                        Usar na Montagem
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {oeTexts && (
+            <div className="card">
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: C.nav, margin: "0 0 10px" }}>
+                Orações Eucarísticas
+              </h3>
+              <p style={{ fontSize: 11, color: C.textMuted, margin: "0 0 10px" }}>
+                Textos do Missal Romano para acompanhar na apresentação. Inclua o Prefácio do dia conforme o folheto da paróquia.
+              </p>
+              <div className="reading-tabs" style={{ marginBottom: 10 }}>
+                {ORACOES_EUCARISTICAS_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className="chip"
+                    onClick={() => setOpenOe(id)}
+                    style={{
+                      padding: "5px 10px",
+                      minHeight: 36,
+                      background: openOe === id ? C.nav : C.searchBg,
+                      color: openOe === id ? C.navText : C.search,
+                      border: "none",
+                      fontFamily: FONT,
+                    }}
+                  >
+                    {id.toUpperCase().replace("OE", "OE ")}
+                  </button>
+                ))}
+              </div>
+              {oeTexts[openOe] && (
+                <>
+                  {oeTexts[openOe].subtitle && (
+                    <p style={{ margin: "0 0 8px", fontSize: 11, color: C.textMuted, fontStyle: "italic" }}>
+                      {oeTexts[openOe].subtitle}
+                    </p>
+                  )}
+                  <p className="liturgy-oe-preview">{oeTexts[openOe].text}</p>
+                  {onUseOracao && (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() =>
+                        onUseOracao(openOe, {
+                          text: oeTexts[openOe].text,
+                          songName: oeTexts[openOe].label,
+                        })
+                      }
+                      style={{
+                        marginTop: 10,
+                        background: C.nav,
+                        color: C.navText,
+                        fontFamily: FONT,
+                      }}
+                    >
+                      Usar {oeTexts[openOe].label} na Montagem
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           )}
 

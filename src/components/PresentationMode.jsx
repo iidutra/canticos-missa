@@ -41,6 +41,10 @@ export default function PresentationMode({
       ? stripChordsFromLyrics(slide.lyrics)
       : slide?.lyrics ?? "";
 
+  const isLiturgicalSlide =
+    slide &&
+    (/^(oe[1-5]|oracao_)/.test(slide.id) || /^Pe\s*:/im.test(displayText));
+
   useEffect(() => {
     setIdx((i) => Math.min(i, Math.max(0, total - 1)));
   }, [total]);
@@ -148,7 +152,7 @@ export default function PresentationMode({
               className={`present-text present-text--cifra`}
             />
           ) : (
-            <LetraView text={displayText} className="present-text present-text--letra" />
+            <LetraView text={displayText} className="present-text present-text--letra" liturgical={isLiturgicalSlide} />
           )}
         </div>
       </main>

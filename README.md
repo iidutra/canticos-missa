@@ -16,6 +16,7 @@ Aplicativo web para montar, salvar e apresentar repertório litúrgico católico
 | **Biblioteca** | Acervo pessoal de músicas com categoria e busca |
 | **Salvos** | Repertórios salvos com data/título da missa e histórico |
 | **Apresentação** | Modo tela cheia, cifra colorida, só letra justificado, A+/A−, troca de tom |
+| **Orações** | Coleta, oferendas e pós-comunhão do dia (CNBB); Orações Eucarísticas I–V para acompanhar |
 | **Exportação** | DOC, DOCX e JSON |
 
 ---

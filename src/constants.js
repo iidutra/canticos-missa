@@ -3,14 +3,21 @@ export const SECTIONS = [
   { id: "entrada", label: "Entrada" },
   { id: "ato", label: "Ato Penitencial" },
   { id: "gloria", label: "Hino de Louvor (Glória)" },
+  { id: "oracao_coleta", label: "Oração Coleta", optional: true, kind: "oracao" },
   { id: "salmo", label: "Salmo Responsorial", optional: true },
   { id: "aclamacao", label: "Aclamação" },
   { id: "ofertorio", label: "Ofertório" },
+  { id: "oracao_oferendas", label: "Oração sobre as Oferendas", optional: true, kind: "oracao" },
   { id: "santo", label: "Santo" },
+  { id: "oe1", label: "Oração Eucarística I", optional: true, kind: "oe" },
+  { id: "oe2", label: "Oração Eucarística II", optional: true, kind: "oe" },
+  { id: "oe3", label: "Oração Eucarística III", optional: true, kind: "oe" },
+  { id: "oe4", label: "Oração Eucarística IV", optional: true, kind: "oe" },
+  { id: "oe5", label: "Oração Eucarística V", optional: true, kind: "oe" },
   { id: "cordeiro", label: "Cordeiro", optional: true },
   { id: "comunhao", label: "Comunhão" },
+  { id: "oracao_comunhao", label: "Oração após Comunhão", optional: true, kind: "oracao" },
   { id: "pos", label: "Pós-Comunhão", optional: true },
-  { id: "consagracao", label: "Consagração", optional: true },
   { id: "final", label: "Canto Final" },
   { id: "final2", label: "Canto Final 2", optional: true },
 ];
@@ -69,6 +76,20 @@ export function mergeRepertoire(stored) {
       semitones: block.semitones ?? 0,
     };
   }
+
+  const leg = stored.consagracao;
+  if (leg?.lyrics?.trim() && !base.oe2?.lyrics?.trim()) {
+    base.oe2 = {
+      included: leg.included ?? base.oe2.included,
+      lyrics: leg.lyrics,
+      songName: leg.songName || "Consagração",
+      key: leg.key ?? "",
+      baseLyrics: leg.baseLyrics ?? leg.lyrics,
+      baseKey: leg.baseKey ?? leg.key ?? "",
+      semitones: leg.semitones ?? 0,
+    };
+  }
+
   return base;
 }
 

@@ -10,11 +10,19 @@ export const PDF_SECTION_PATTERNS = [
   { id: "salmo", patterns: [/^salmo\s+responsorial\s*$/i, /^salmo\s*$/i] },
   { id: "aclamacao", patterns: [/^aclam[aã][çc][aã]o\s+ao\s+evangelho\s*$/i, /^aclam[aã][çc][aã]o\s*$/i] },
   { id: "ofertorio", patterns: [/^ofert[oó]rio\s*$/i, /^apresenta[cç][aã]o\s+das\s+ofer/i] },
+  { id: "oracao_oferendas", patterns: [/^ora[cç][aã]o\s+sobre\s+as\s+ofer/i, /^super\s+oblat/i] },
   { id: "santo", patterns: [/^santo\s*$/i] },
+  { id: "oe1", patterns: [/^ora[cç][aã]o\s+eucar[ií]stica\s+i\s*$/i, /^oe\s*i\s*$/i] },
+  { id: "oe2", patterns: [/^ora[cç][aã]o\s+eucar[ií]stica\s+ii\s*$/i, /^oe\s*ii\s*$/i] },
+  { id: "oe3", patterns: [/^ora[cç][aã]o\s+eucar[ií]stica\s+iii\s*$/i, /^oe\s*iii\s*$/i] },
+  { id: "oe4", patterns: [/^ora[cç][aã]o\s+eucar[ií]stica\s+iv\s*$/i, /^oe\s*iv\s*$/i] },
+  { id: "oe5", patterns: [/^ora[cç][aã]o\s+eucar[ií]stica\s+v\s*$/i, /^oe\s*v\s*$/i] },
+  { id: "consagracao", patterns: [/^consagra[cç][aã]o\s*$/i] },
   { id: "cordeiro", patterns: [/^cordeiro\s*$/i, /^agnus\s+dei\s*$/i] },
   { id: "pos", patterns: [/^p[oó]s[\s-]*comunh[aã]o\s*$/i] },
   { id: "comunhao", patterns: [/^ant[ií]fona\s+de\s+comunh[aã]o\s*$/i, /^comunh[aã]o\s*$/i] },
-  { id: "consagracao", patterns: [/^consagra[cç][aã]o\s*$/i, /^ora[cç][aã]o\s+eucar/i] },
+  { id: "oracao_comunhao", patterns: [/^ora[cç][aã]o\s+ap[oó]s\s+comunh[aã]o\s*$/i, /^ora[cç][aã]o\s+p[oó]s[\s-]*comunh[aã]o\s*$/i] },
+  { id: "oracao_coleta", patterns: [/^ora[cç][aã]o\s+coleta\s*$/i, /^coleta\s*$/i] },
   { id: "final", patterns: [/^canto\s+final\s*$/i, /^final\s*$/i] },
 ];
 
@@ -64,15 +72,34 @@ export function parseSectionLine(line) {
     { id: "gloria", re: /^hino\s+de\s+louvor\s*:\s*(.+)/i },
     { id: "aclamacao", re: /^aclam[aã][çc][aã]o\s*:\s*(.+)/i },
     { id: "ofertorio", re: /^ofert[oó]rio\s*:\s*(.+)/i },
+    { id: "oracao_coleta", re: /^ora[cç][aã]o\s+coleta\s*:\s*(.*)$/i },
+    { id: "oracao_oferendas", re: /^ora[cç][aã]o\s+(?:sobre\s+as\s+ofer|super\s+oblat)/i },
     { id: "santo", re: /^santo\s*:\s*(?:santo\s*:\s*)?(.+)/i },
-    { id: "comunhao", re: /^comunh[aã]o\s*:\s*(.+)/i },
-    { id: "pos", re: /^p[oó]s[\s-]*comunh[aã]o\s*:\s*(.+)/i },
-    { id: "final2", re: /^final\s*2\s*:\s*(.+)/i },
-    { id: "final", re: /^final\s*:\s*(.+)/i },
-    { id: "consagracao", re: /^consagra[cç][aã]o\s+(.+)/i },
+    { id: "oe1", re: /^ora[cç][aã]o\s+eucar[ií]stica\s+i\s*:\s*(.*)$/i },
+    { id: "oe2", re: /^ora[cç][aã]o\s+eucar[ií]stica\s+ii\s*:\s*(.*)$/i },
+    { id: "oe3", re: /^ora[cç][aã]o\s+eucar[ií]stica\s+iii\s*:\s*(.*)$/i },
+    { id: "oe4", re: /^ora[cç][aã]o\s+eucar[ií]stica\s+iv\s*:\s*(.*)$/i },
+    { id: "oe5", re: /^ora[cç][aã]o\s+eucar[ií]stica\s+v\s*:\s*(.*)$/i },
+    { id: "consagracao", re: /^consagra[cç][aã]o\s*(?::\s*(.+))?$/i },
   ];
 
   for (const { id, re } of withTitle) {
+    const m = t.match(re);
+    if (m) {
+      const title = (m[1] ?? "").trim();
+      const mapped = id === "consagracao" ? "oe2" : id;
+      return { sectionId: mapped, songTitle: title || SECTIONS.find((s) => s.id === mapped)?.label || t };
+    }
+  }
+
+  const withTitleRest = [
+    { id: "comunhao", re: /^comunh[aã]o\s*:\s*(.+)/i },
+    { id: "pos", re: /^p[oó]s[\s-]*comunh[aã]o\s*:\s*(.+)/i },
+    { id: "oracao_comunhao", re: /^ora[cç][aã]o\s+(?:ap[oó]s|p[oó]s[\s-]*)\s*comunh[aã]o\s*:\s*(.*)$/i },
+    { id: "final2", re: /^final\s*2\s*:\s*(.+)/i },
+    { id: "final", re: /^final\s*:\s*(.+)/i },
+  ];
+  for (const { id, re } of withTitleRest) {
     const m = t.match(re);
     if (m) return { sectionId: id, songTitle: m[1].trim() };
   }
@@ -95,7 +122,7 @@ export function matchSectionHeader(line) {
   const t = line.trim().replace(/:+\s*$/, "").trim();
   if (!t || t.length > 80 || isChordLine(t)) return null;
   for (const { id, patterns } of PDF_SECTION_PATTERNS) {
-    if (patterns.some((p) => p.test(t))) return id;
+    if (patterns.some((p) => p.test(t))) return id === "consagracao" ? "oe2" : id;
   }
   return null;
 }
@@ -278,7 +305,8 @@ export function parsedToRepertoire(parsed, sectionMap = {}) {
   });
 
   for (const block of parsed.sections) {
-    const targetId = sectionMap[block.sectionId] ?? block.sectionId;
+    const rawId = block.sectionId === "consagracao" ? "oe2" : block.sectionId;
+    const targetId = sectionMap[rawId] ?? rawId;
     if (!base[targetId]) continue;
     const content = songsToBlock(block.songs);
     if (!content?.lyrics?.trim()) continue;
