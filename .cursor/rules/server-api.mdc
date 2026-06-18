@@ -1,0 +1,35 @@
+---
+description: Backend Express, Postgres e APIs
+globs: server/**/*
+alwaysApply: false
+---
+
+# Backend Express
+
+## Estrutura
+
+- `server/index.js` — montagem de rotas, static `dist/`, SPA fallback (Express 5: sem `app.get('*')`)
+- Rotas em `server/routes/`; lógica compartilhada em módulos raiz (`db.js`, `cifraclub.js`, `calendar-store.js`)
+- Dev: mesma lógica via `server/vite-plugin-*.js` — manter paridade de comportamento
+
+## PostgreSQL (`db.js`)
+
+- Tabelas: `app_data`, `mpm_calendar`, `mpm_calendar_meta`
+- `workspaceId()` de `WORKSPACE_ID` env (default `default`)
+- Storage keys permitidas: `lib`, `reps`, `cur` — validar em `routes/storage.js`
+
+## APIs externas
+
+- Cifra Club: Solr + parse HTML — tratar falhas com 502 e mensagem clara
+- MPM/CNBB: `musicasparamissa.js` + acervo local `data/mpm-calendar.json`
+- Import DOC: `word-extractor` + multer; limite body 12mb em `index.js`
+
+## Erros
+
+- Logar com `console.error`; responder JSON `{ error: "..." }`
+- Não expor stack trace ao cliente em produção
+
+## Deploy
+
+- `npm run build` antes de `npm start`; health em `/api/health`
+- `DATABASE_URL` ausente → storage retorna 503 (esperado em dev sem DB)

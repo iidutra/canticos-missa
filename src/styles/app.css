@@ -620,7 +620,7 @@ textarea.inp {
 }
 
 .present-content--letra {
-  max-width: 640px;
+  max-width: min(100%, 760px);
 }
 
 .present-text {
@@ -667,9 +667,37 @@ textarea.inp {
 .present-text--letra {
   font-family: var(--font);
   font-size: calc(clamp(14px, 3.6vw, 18px) * var(--present-scale, 1));
-  line-height: 1.5;
-  text-align: center;
-  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.present-letra-line {
+  margin: 0 0 0.28em;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.present-letra-line--justify {
+  text-align: justify;
+  text-align-last: left;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+.present-letra-line--left {
+  text-align: left;
+}
+
+.present-letra-line--marker {
+  text-align: left;
+  color: #e8c96a;
+  font-weight: 700;
+  font-style: italic;
+  margin-top: 0.35em;
+}
+
+.present-letra-line--blank {
+  height: 0.45em;
+  margin: 0;
 }
 
 .present-title {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { C, FONT } from "../constants.js";
 import { hasChords, parseKey, stripChordsFromLyrics } from "../lib/transpose.js";
 import CifraView from "./CifraView.jsx";
+import LetraView from "./LetraView.jsx";
 
 const CC_ORANGE = "#FF7700";
 const BG = "#0f1419";
@@ -92,8 +93,8 @@ export default function PresentationMode({
             <span style={{ color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
               {slide.label}
             </span>
-            {slide.key && showCifra ? (
-              <span style={{ marginLeft: 8, color: CC_ORANGE, fontWeight: 600 }}>
+            {slide.key ? (
+              <span style={{ marginLeft: 8, color: showCifra ? CC_ORANGE : "#aaa", fontWeight: 600 }}>
                 tom: {slide.key}
               </span>
             ) : null}
@@ -147,7 +148,7 @@ export default function PresentationMode({
               className={`present-text present-text--cifra`}
             />
           ) : (
-            <pre className="present-text present-text--letra">{displayText}</pre>
+            <LetraView text={displayText} className="present-text present-text--letra" />
           )}
         </div>
       </main>

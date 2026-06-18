@@ -1,0 +1,33 @@
+---
+description: Deploy Railway, calendário MPM e Git workflow
+globs: "{railway.toml,nixpacks.toml,.gitlab-ci.yml,scripts/**,data/**}"
+alwaysApply: false
+---
+
+# Deploy e manutenção
+
+## Railway
+
+- Build: Nixpacks (`npm ci` → `npm run build` → `npm start`)
+- Variáveis: `DATABASE_URL` (Postgres), opcional `WORKSPACE_ID`, `PORT`
+- Health check: `/api/health` (`railway.toml`)
+- Deploy CLI: `railway up --detach` após push em `main`
+
+## Calendário MPM
+
+- Acervo: `data/mpm-calendar.json` + espelho `public/data/mpm-calendar.json`
+- Sync: `npm run sync-calendar` ou GitLab CI schedule (`.gitlab-ci.yml`)
+- Commit sync: `chore: sync calendário MPM #calendar`
+- Sempre atualizar **ambos** os JSON ao syncar
+
+## Publicação
+
+- Conventional commits; referência `#issue` quando houver
+- Não commitar `.env`, credenciais ou `node_modules`
+- Após mudanças de UI/apresentação: `npm run build` local antes do deploy
+- Push GitHub `main` → deploy Railway (manual ou automático conforme config)
+
+## Produção
+
+URL: https://canticos-app-production.up.railway.app  
+Verificar pós-deploy: `GET /api/health` → `{ ok: true, db: true }`

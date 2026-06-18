@@ -1,0 +1,29 @@
+---
+description: Visão geral e convenções do projeto Cânticos da Missa
+alwaysApply: true
+---
+
+# Cânticos da Missa — projeto
+
+App Vite + React 19 para repertório litúrgico católico. Express + Postgres em produção (Railway); dev usa localStorage via `src/storage.js`.
+
+## Estrutura principal
+
+- `src/App.jsx` — abas Início, Montar, Biblioteca, Salvos
+- `src/lib/transpose.js` — cifras, transposição, `CHORD_RE`, `splitLineByChords`
+- `src/lib/pdf-import.js` — parser PDF/DOC/DOCX
+- `src/components/PresentationMode.jsx` — apresentação fullscreen
+- `server/index.js` — Express produção; APIs em `server/routes/`
+
+## Convenções
+
+- Commits: conventional commits (`feat`, `fix`, `docs`, `chore`); issues GitLab `#N`
+- UI em português (pt-BR); `lang="pt-BR"` no HTML
+- Minimize escopo: diff focado, sem refatorar o que não foi pedido
+- Reutilize `constants.js` (`SECTIONS`, `C`, `FONT`) e funções em `transpose.js`
+- Estilos responsivos em `src/styles/app.css`; evite inline styles novos se houver classe CSS equivalente
+- Dev: `npm run dev` (sem DB). Prod: `DATABASE_URL` obrigatório para storage
+
+## Limitação conhecida
+
+Storage em produção usa workspace `default` sem auth — não assumir dados por usuário até auth existir.

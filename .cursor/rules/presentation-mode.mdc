@@ -1,0 +1,33 @@
+---
+description: Modo apresentação — cifra, letra e responsivo
+globs: src/components/{PresentationMode,CifraView,LetraView}.jsx
+alwaysApply: false
+---
+
+# Modo apresentação
+
+Arquivos: `PresentationMode.jsx`, `CifraView.jsx`, `LetraView.jsx`, estilos `.present-*` em `app.css`.
+
+## Dois modos de conteúdo
+
+| Modo | Componente | Alinhamento |
+|------|------------|-------------|
+| Cifra ativa | `CifraView` | Esquerda; acordes `.cifra-chord` laranja |
+| Só letra | `LetraView` | Justificado (linhas longas); curtas à esquerda |
+
+## Regras de renderização
+
+- Com cifra: `CifraView` + `splitLineByChords` — não usar `<pre>` com texto cru
+- Só letra: `stripChordsFromLyrics` antes de `LetraView`
+- Marcadores `[Refrão]` / `(Intro)`: `isSectionMarkerLine` — dourado, sem justificar
+- Tom no header: visível com e sem cifra; barra de transposição só com cifra ativa
+
+## Mobile / tablet
+
+- Cifra: `white-space: pre-wrap` + quebra; desktop (1024px+): `pre` para alinhamento
+- `overflow-x: hidden` no shell; conteúdo `width: 100%`
+- Não aumentar fonte de letra no mobile além de `clamp` existente sem testar overflow
+
+## Atalhos (não remover)
+
+`Esc`, setas, espaço, `+`/`-` — registrados em `PresentationMode` via `keydown`

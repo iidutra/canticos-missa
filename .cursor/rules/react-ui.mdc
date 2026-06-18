@@ -1,0 +1,31 @@
+---
+description: Padrões React e UI do frontend
+globs: src/**/*.{jsx,js,css}
+alwaysApply: false
+---
+
+# Frontend React
+
+## Componentes
+
+- Componentes funcionais; estado local com `useState`/`useEffect`
+- Componentes de apresentação: `CifraView`, `LetraView` — renderizam texto; não duplicar lógica de acordes fora de `transpose.js`
+- Props explícitas; evite prop drilling profundo — `App.jsx` centraliza estado por enquanto
+
+## Cifras e letras
+
+- Detecção/transposição: sempre `src/lib/transpose.js` (`hasChords`, `CHORD_RE`, `isChordOnlyLine`)
+- Import/parser: `src/lib/pdf-import.js` — ao adicionar seções, atualize `PDF_SECTION_PATTERNS` e `parseSectionLine`
+- Fonte cifra: `"Roboto Mono", Consolas, monospace`
+- Fonte letra: `var(--font)` / `FONT` de `constants.js`
+
+## CSS responsivo
+
+- Mobile-first; breakpoints em `app.css`: 768px (tablet), 1024px (desktop)
+- Modo apresentação: classes `.present-*`, `.cifra-*`, `.present-letra-line--*`
+- Touch targets ≥ 44px no mobile; safe areas `--safe-*` no apresentação
+- `--present-scale` controla tamanho de fonte na apresentação (A+/A−)
+
+## Storage cliente
+
+- Usar `window.storage.get/set` — nunca `localStorage` direto no app (exceto `storage.js`)
