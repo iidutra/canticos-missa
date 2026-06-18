@@ -1,0 +1,33 @@
+# Sync mensal do calendário Músicas para Missa (acervo acumulativo).
+# Agendar no GitLab: CI/CD → Schedules → dia 1 de cada mês.
+# Requer CI_JOB_TOKEN com permissão de push ou deploy token configurado.
+
+stages:
+  - sync
+
+sync-mpm-calendar:
+  stage: sync
+  image: node:22-alpine
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - when: manual
+      allow_failure: true
+  before_script:
+    - apk add --no-cache git
+  script:
+    - node scripts/sync-mpm-calendar.mjs
+    - |
+      git config user.email "ci@${CI_SERVER_HOST}"
+      git config user.name "GitLab CI"
+      git add data/mpm-calendar.json public/data/mpm-calendar.json
+      if git diff --staged --quiet; then
+        echo "Calendário já está atualizado."
+      else
+        git commit -m "chore: sync calendário MPM #calendar"
+        git push "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" HEAD:${CI_COMMIT_REF_NAME}
+      fi
+  artifacts:
+    paths:
+      - data/mpm-calendar.json
+      - public/data/mpm-calendar.json
+    expire_in: 30 days

@@ -1,0 +1,14 @@
+{
+  "sections": {
+    "entrada": {
+      "included": true,
+      "songName": "Senhor Se Tu Me Chamas",
+      "lyrics": "Senhor se Tu me chamas\nEu quero te ouvir\nSe queres que eu te siga\nRespondo: eis-me aqui\n\nProfetas te ouviram e seguiram tua voz\nAndaram mundo afora e pregaram sem temor"
+    },
+    "ato": {
+      "included": true,
+      "songName": "Ato Penitencial",
+      "lyrics": "Senhor, que sois o caminho que leva ao Pai,\ntende piedade de nós"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.env.local
+*.local
+canticos-da-missa.docx
+.railway

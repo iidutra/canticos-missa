@@ -1,0 +1,30 @@
+{
+  "name": "canticos-da-missa",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "preview": "vite preview",
+    "generate-docx": "node scripts/generate-docx.js",
+    "sync-calendar": "node scripts/sync-mpm-calendar.mjs"
+  },
+  "dependencies": {
+    "compression": "^1.8.0",
+    "docx": "^9.5.0",
+    "express": "^5.1.0",
+    "pdfjs-dist": "^6.0.227",
+    "pg": "^8.16.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.5.2",
+    "vite": "^6.3.5"
+  }
+}

@@ -1,0 +1,778 @@
+/* Cânticos da Missa — layout responsivo (mobile, tablet, desktop) */
+
+:root {
+  --c-bg: #faf8f5;
+  --c-card: #ffffff;
+  --c-nav: #1b2a4a;
+  --c-nav-text: #e8e4df;
+  --c-gold: #c9a84c;
+  --c-gold-light: #f5efd8;
+  --c-text: #2d2d2d;
+  --c-text-muted: #6b6b6b;
+  --c-border: #e2ded8;
+  --c-danger: #b54a4a;
+  --c-danger-bg: #fdf0f0;
+  --c-success: #4a7c59;
+  --c-success-bg: #edf5ef;
+  --c-search: #4a5a8c;
+  --c-search-bg: #eef0f8;
+
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --app-max: 880px;
+  --app-max-wide: 1040px;
+  --header-h: 56px;
+  --bottom-nav-h: 64px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --touch-min: 44px;
+  --radius: 8px;
+  --shadow: 0 2px 12px rgba(27, 42, 74, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font);
+  line-height: 1.45;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: var(--c-search);
+}
+
+/* ── Shell ── */
+
+.app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--c-nav);
+  padding: calc(10px + var(--safe-top)) calc(12px + var(--safe-right)) 10px calc(12px + var(--safe-left));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.app-header__inner {
+  max-width: var(--app-max-wide);
+  margin: 0 auto;
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-header__title {
+  color: var(--c-gold);
+  font-size: clamp(1rem, 4vw, 1.125rem);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.app-header__subtitle {
+  color: var(--c-nav-text);
+  font-size: 0.75rem;
+  margin: 0;
+  opacity: 0.75;
+  display: none;
+}
+
+.app-nav-desktop {
+  display: none;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.app-nav-mobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  gap: 2px;
+  padding: 6px calc(6px + var(--safe-right)) calc(6px + var(--safe-bottom)) calc(6px + var(--safe-left));
+  background: var(--c-nav);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--app-max-wide);
+  margin: 0 auto;
+  padding: 12px calc(12px + var(--safe-right)) calc(var(--bottom-nav-h) + 16px + var(--safe-bottom)) calc(12px + var(--safe-left));
+}
+
+/* ── Tab buttons ── */
+
+.app-tab {
+  flex: 1;
+  min-height: var(--touch-min);
+  padding: 8px 4px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--c-nav-text);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-tab--active {
+  background: var(--c-gold);
+  color: var(--c-nav);
+}
+
+.app-nav-mobile .app-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.6875rem;
+  padding: 6px 2px;
+  min-height: 52px;
+  border-radius: 10px;
+}
+
+.app-tab__icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+/* ── Cards & forms ── */
+
+.card {
+  background: var(--c-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+
+.inp {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  font-size: 1rem;
+  outline: none;
+  background: #fff;
+  min-height: var(--touch-min);
+}
+
+.inp:focus,
+textarea.inp:focus,
+select.inp:focus {
+  border-color: var(--c-gold);
+  box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.25);
+}
+
+textarea.inp {
+  min-height: 160px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--touch-min);
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--c-text-muted);
+  border: 1px solid var(--c-border);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Toolbars ── */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.toolbar-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.toolbar-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.page-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.page-toolbar__meta {
+  font-size: 0.8125rem;
+  color: var(--c-text-muted);
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-row--2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.label-sm {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ── Section accordion (Montar) ── */
+
+.section-card {
+  background: var(--c-card);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  border: 1px solid var(--c-border);
+  overflow: hidden;
+}
+
+.section-card--filled {
+  border-color: rgba(201, 168, 76, 0.45);
+}
+
+.section-card__head {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  min-height: var(--touch-min);
+  gap: 8px;
+}
+
+.section-card__head input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-gold);
+  flex-shrink: 0;
+}
+
+.section-card__body {
+  padding: 0 14px 14px;
+}
+
+.search-box {
+  background: var(--c-search-bg);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(74, 90, 140, 0.2);
+}
+
+.search-box__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Toast ── */
+
+.app-toast {
+  position: fixed;
+  top: calc(12px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  animation: toast-in 0.25s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ── Liturgy dashboard ── */
+
+.liturgy-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.liturgy-calendar-col {
+  flex-shrink: 0;
+}
+
+.liturgy-detail-col {
+  min-width: 0;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-weekday {
+  text-align: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  padding: 4px 2px;
+}
+
+.cal-day {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: 8px 2px;
+  font-size: clamp(0.6875rem, 2.5vw, 0.8125rem);
+  font-family: var(--font);
+  min-height: 44px;
+  cursor: pointer;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-day--today {
+  background: var(--c-gold-light);
+}
+
+.cal-day--selected {
+  background: var(--c-gold);
+  border-color: var(--c-gold);
+  color: var(--c-nav);
+  font-weight: 600;
+}
+
+.cal-day--destaque {
+  font-weight: 700;
+  background: #ede8f5;
+}
+
+.cal-dot {
+  display: block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin-top: 3px;
+}
+
+.cal-dot--mpm {
+  background: var(--c-search);
+}
+
+.cal-dot--cnbb {
+  border: 1px solid var(--c-text-muted);
+  opacity: 0.5;
+}
+
+.chip-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chip {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-family: var(--font);
+  cursor: pointer;
+  text-align: left;
+  min-height: var(--touch-min);
+}
+
+.missa-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.missa-header__thumb {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.missa-header__thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.reading-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.song-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+
+/* ── Modal ── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+
+.modal-panel {
+  background: var(--c-card);
+  width: 100%;
+  max-height: 92dvh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.modal-panel__head {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.modal-panel__body {
+  padding: 16px;
+  flex: 1;
+  overflow: auto;
+}
+
+.modal-panel__foot {
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  border-top: 1px solid var(--c-border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.modal-panel__foot .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* ── Presentation mode ── */
+
+.present-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #0f1419;
+  color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.present-header {
+  padding: calc(8px + var(--safe-top)) 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.present-header__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.present-tools {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.present-keys {
+  padding: 8px 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.present-keys__row {
+  display: flex;
+  gap: 4px;
+  min-width: min-content;
+}
+
+.present-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+
+.present-footer .btn {
+  flex: 1;
+  max-width: 180px;
+  min-height: 48px;
+}
+
+/* ── Tablet (768px+) ── */
+
+@media (min-width: 768px) {
+  .app-header {
+    padding: 14px 20px;
+  }
+
+  .app-header__subtitle {
+    display: inline;
+  }
+
+  .app-nav-desktop {
+    display: flex;
+  }
+
+  .app-nav-mobile {
+    display: none;
+  }
+
+  .app-main {
+    padding: 16px 20px 32px;
+  }
+
+  .modal-overlay {
+    align-items: center;
+    padding: 20px;
+  }
+
+  .modal-panel {
+    max-width: 560px;
+    max-height: 88vh;
+    border-radius: 12px;
+  }
+
+  .action-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, auto));
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .form-row--2 {
+    grid-template-columns: 1fr 2fr;
+  }
+
+  .search-box__fields {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .search-box__fields .inp {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .missa-header__thumb {
+    width: 112px;
+    height: 112px;
+  }
+
+  .present-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 16px;
+  }
+
+  .present-header__top {
+    flex: 1;
+    align-items: center;
+  }
+}
+
+/* ── Desktop (1024px+) ── */
+
+@media (min-width: 1024px) {
+  :root {
+    --app-max: 880px;
+  }
+
+  .app-main {
+    padding: 20px 24px 40px;
+  }
+
+  .liturgy-layout {
+    display: grid;
+    grid-template-columns: minmax(300px, 360px) 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .liturgy-calendar-col {
+    position: sticky;
+    top: calc(var(--header-h) + 80px);
+  }
+
+  .page-toolbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-panel {
+    max-width: 600px;
+  }
+}
+
+/* ── Large desktop ── */
+
+@media (min-width: 1280px) {
+  .app-header__inner,
+  .app-main {
+    max-width: var(--app-max-wide);
+  }
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast {
+    animation: none;
+  }
+}
