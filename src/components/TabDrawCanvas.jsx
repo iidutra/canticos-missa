@@ -16,20 +16,27 @@ export default function TabDrawCanvas({ value, onChange, className }) {
   const lastPointRef = useRef(null);
   const saveTimerRef = useRef(null);
   const loadedValueRef = useRef(null);
+  const lastExportRef = useRef("");
+  const sizeRef = useRef({ w: 0, h: 0 });
+  const onChangeRef = useRef(onChange);
   const [tool, setTool] = useState("pen");
   const [brushId, setBrushId] = useState("m");
 
+  onChangeRef.current = onChange;
   const brushSize = BRUSH_SIZES.find((b) => b.id === brushId)?.size ?? 4;
 
   const exportDrawing = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || canvas.width === 0 || canvas.height === 0) return;
-    onChange?.(canvas.toDataURL("image/png"));
-  }, [onChange]);
+    const dataUrl = canvas.toDataURL("image/png");
+    if (dataUrl === lastExportRef.current) return;
+    lastExportRef.current = dataUrl;
+    onChangeRef.current?.(dataUrl);
+  }, []);
 
   const scheduleSave = useCallback(() => {
     clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(exportDrawing, 350);
+    saveTimerRef.current = setTimeout(exportDrawing, 500);
   }, [exportDrawing]);
 
   const setupContext = useCallback((ctx) => {
@@ -60,15 +67,17 @@ export default function TabDrawCanvas({ value, onChange, className }) {
     const rect = container.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const displayW = rect.width;
-    const displayH = rect.height;
+    const displayW = Math.round(rect.width);
+    const displayH = Math.round(rect.height);
+    if (displayW === sizeRef.current.w && displayH === sizeRef.current.h) return;
 
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const prevUrl =
       canvas.width > 0 && canvas.height > 0
         ? canvas.toDataURL("image/png")
         : loadedValueRef.current || null;
 
+    sizeRef.current = { w: displayW, h: displayH };
     canvas.width = Math.round(displayW * dpr);
     canvas.height = Math.round(displayH * dpr);
     canvas.style.width = `${displayW}px`;
@@ -90,14 +99,22 @@ export default function TabDrawCanvas({ value, onChange, className }) {
     resizeCanvas();
     const container = containerRef.current;
     if (!container) return undefined;
-    const ro = new ResizeObserver(() => resizeCanvas());
+    let frame = 0;
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(resizeCanvas);
+    });
     ro.observe(container);
-    return () => ro.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      ro.disconnect();
+    };
   }, [resizeCanvas]);
 
   useEffect(() => {
     if (loadedValueRef.current === value) return;
     loadedValueRef.current = value;
+    lastExportRef.current = value || "";
 
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -203,7 +220,8 @@ export default function TabDrawCanvas({ value, onChange, className }) {
     ctx.fillStyle = BG;
     ctx.fillRect(0, 0, rect.width, rect.height);
     loadedValueRef.current = "";
-    onChange?.("");
+    lastExportRef.current = "";
+    onChangeRef.current?.("");
   };
 
   return (
@@ -246,7 +264,6 @@ export default function TabDrawCanvas({ value, onChange, className }) {
           onPointerMove={handlePointerMove}
           onPointerUp={finishStroke}
           onPointerCancel={finishStroke}
-          onPointerLeave={finishStroke}
           aria-label="Desenho da tab de percussão"
         />
       </div>

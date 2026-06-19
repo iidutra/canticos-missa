@@ -128,14 +128,20 @@ export default function App() {
 
   const updateSectionBlock = useCallback((secId, updater) => {
     if (presentSourceRef.current) {
-      setPresentSource((prev) => ({ ...prev, [secId]: updater(prev[secId]) }));
-    } else {
-      const next = {
-        ...sectionsRef.current,
-        [secId]: updater(sectionsRef.current[secId]),
-      };
-      setCur(next);
+      setPresentSource((prev) => {
+        const block = prev?.[secId];
+        if (!block) return prev;
+        return { ...prev, [secId]: updater(block) };
+      });
+      return;
     }
+    const block = sectionsRef.current[secId];
+    if (!block) return;
+    const next = {
+      ...sectionsRef.current,
+      [secId]: updater(block),
+    };
+    setCur(next);
   }, []);
 
   const transposeSection = (secId, delta) => {
@@ -165,7 +171,10 @@ export default function App() {
       for (const [secId, keyStr] of Object.entries(keysMap)) {
         const semi = parseKey(keyStr);
         if (semi === null || semi === undefined) continue;
-        updateSectionBlock(secId, (block) => setBlockToKey(block, semi));
+        updateSectionBlock(secId, (block) => {
+          if (!block) return block;
+          return setBlockToKey(block, semi);
+        });
       }
     },
     [updateSectionBlock]
@@ -614,7 +623,7 @@ export default function App() {
       flash("Adicione letras primeiro", true);
       return;
     }
-    setPresentSource(sourceSections ? src : null);
+    setPresentSource(src);
     setPresentRepId(repMeta?.id ?? null);
     setPresentMeta(
       repMeta ?? {
@@ -629,14 +638,15 @@ export default function App() {
     const src = presentSourceRef.current;
     const repId = presentRepId;
     if (src) {
+      const merged = mergeRepertoire(src);
       if (repId) {
         setReps((reps) =>
           reps.map((r) =>
-            r.id === repId ? { ...r, sections: mergeRepertoire(src) } : r
+            r.id === repId ? { ...r, sections: merged } : r
           )
         );
       } else {
-        setCur(mergeRepertoire(src));
+        setCur(merged);
       }
     }
     setPresentOpen(false);
@@ -754,7 +764,7 @@ export default function App() {
           id: s.id,
           label: s.label,
           songName: block.songName,
-          lyrics: block.lyrics.trim(),
+          lyrics: (block.lyrics ?? "").trim(),
           key: block.key || "",
           percTab: block.percTab || "",
           percTabDraw: block.percTabDraw || "",

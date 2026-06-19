@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { C, FONT } from "../constants.js";
 import { hasChords, parseKey, stripChordsFromLyrics } from "../lib/transpose.js";
 import {
@@ -46,7 +46,21 @@ export default function PresentationMode({
   const [tabDraws, setTabDraws] = useState({});
   const [loaded, setLoaded] = useState(false);
   const saveTimer = useRef(null);
+  const drawPersistTimers = useRef({});
+  const tabDrawsRef = useRef({});
   const keysSaved = useRef("");
+  const onCloseRef = useRef(onClose);
+  const onTabDrawChangeRef = useRef(onTabDrawChange);
+  onCloseRef.current = onClose;
+  onTabDrawChangeRef.current = onTabDrawChange;
+
+  const handleClose = useCallback(() => {
+    Object.entries(tabDrawsRef.current).forEach(([secId, value]) => {
+      clearTimeout(drawPersistTimers.current[secId]);
+      onTabDrawChangeRef.current?.(secId, value);
+    });
+    onCloseRef.current();
+  }, []);
 
   const slide = slides[idx];
   const total = slides.length;
@@ -54,7 +68,8 @@ export default function PresentationMode({
   const showCifra = hasCifra && showChords;
   const currentSemi = slide?.key ? parseKey(slide.key) : null;
   const tabText = slide ? tabs[slide.id] ?? slide.percTab ?? "" : "";
-  const tabDraw = slide ? tabDraws[slide.id] ?? slide.percTabDraw ?? "" : "";
+  const tabDraw = slide ? tabDraws[slide.id] ?? "" : "";
+  tabDrawsRef.current = tabDraws;
 
   const displayText =
     slide && hasCifra && !showChords
@@ -158,7 +173,7 @@ export default function PresentationMode({
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === "TEXTAREA" || e.target.tagName === "CANVAS") return;
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
       if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") {
         e.preventDefault();
         setIdx((i) => Math.min(i + 1, total - 1));
@@ -178,10 +193,15 @@ export default function PresentationMode({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, total]);
+  }, [handleClose, total]);
 
   useEffect(() => {
-    document.documentElement.requestFullscreen?.().catch(() => {});
+    const prefersFinePointer =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: fine)").matches;
+    if (prefersFinePointer) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
     return () => {
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     };
@@ -197,8 +217,11 @@ export default function PresentationMode({
   const handleTabDrawEdit = (value) => {
     if (!slide) return;
     setTabDraws((prev) => ({ ...prev, [slide.id]: value }));
-    onTabDrawChange?.(slide.id, value);
     scheduleSave({ tabDraws: { [slide.id]: value } });
+    clearTimeout(drawPersistTimers.current[slide.id]);
+    drawPersistTimers.current[slide.id] = setTimeout(() => {
+      onTabDrawChangeRef.current?.(slide.id, value);
+    }, 1000);
   };
 
   if (!slide) return null;
@@ -277,7 +300,7 @@ export default function PresentationMode({
             <span style={{ fontSize: 12, color: "#888", marginLeft: 4 }}>
               {idx + 1} / {total}
             </span>
-            <button type="button" className="btn btn-sm" onClick={onClose} style={exitBtn}>
+            <button type="button" className="btn btn-sm" onClick={handleClose} style={exitBtn}>
               Sair
             </button>
           </div>
