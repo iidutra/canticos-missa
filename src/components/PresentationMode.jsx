@@ -369,19 +369,23 @@ export default function PresentationMode({
                 </div>
               </div>
               {tabEditMode === "text" ? (
-                <TabView
-                  value={tabText}
-                  onChange={handleTabEdit}
-                  className="present-text present-text--tab"
-                  fontScale={fontScale}
-                />
+                <div className="present-tab-panel__body">
+                  <TabView
+                    value={tabText}
+                    onChange={handleTabEdit}
+                    className="present-text present-text--tab"
+                    fontScale={fontScale}
+                  />
+                </div>
               ) : (
-                <TabDrawCanvas
-                  key={slide.id}
-                  value={tabDraw}
-                  onChange={handleTabDrawEdit}
-                  className="present-tab-panel__draw"
-                />
+                <div className="present-tab-panel__body">
+                  <TabDrawCanvas
+                    key={slide.id}
+                    value={tabDraw}
+                    onChange={handleTabDrawEdit}
+                    className="present-tab-panel__draw"
+                  />
+                </div>
               )}
             </aside>
           )}

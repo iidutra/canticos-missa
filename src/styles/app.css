@@ -623,12 +623,14 @@ textarea.inp {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  padding-bottom: calc(72px + var(--safe-bottom));
 }
 
 .present-split {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   max-width: 100%;
   min-height: 0;
@@ -637,6 +639,10 @@ textarea.inp {
 .present-main--split .present-split {
   flex: 1;
   min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(200px, 42vh);
+  grid-template-rows: minmax(0, 1fr) minmax(200px, 42dvh);
+  gap: 10px;
 }
 
 .present-content--music {
@@ -644,8 +650,7 @@ textarea.inp {
 }
 
 .present-main--split .present-content--music {
-  flex: 1 1 auto;
-  min-height: min(42vh, 360px);
+  min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -654,29 +659,18 @@ textarea.inp {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 160px;
-  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
-.present-main--split .present-tab-panel {
-  flex: 0 0 min(38vh, 280px);
-  min-height: 140px;
-}
-
-.present-tab-panel__head {
+.present-tab-panel__body {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px 10px;
-  flex-shrink: 0;
-}
-
-.present-tab-panel__modes {
-  display: flex;
-  gap: 6px;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .present-tab-panel__draw,
@@ -685,6 +679,7 @@ textarea.inp {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .tab-draw__toolbar {
@@ -695,8 +690,8 @@ textarea.inp {
 }
 
 .tab-draw__surface {
-  flex: 1;
-  min-height: 100px;
+  flex: 1 1 auto;
+  min-height: 0;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   overflow: hidden;
@@ -720,9 +715,18 @@ textarea.inp {
   color: #e8c96a;
 }
 
-.present-tab-panel__hint {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+.present-tab-panel__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  flex-shrink: 0;
+}
+
+.present-tab-panel__modes {
+  display: flex;
+  gap: 6px;
 }
 
 .present-content {
@@ -793,7 +797,8 @@ textarea.inp {
   line-height: 1.45;
   flex: 1;
   width: 100%;
-  min-height: 120px;
+  min-height: 0;
+  height: 100%;
   resize: none;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -1024,26 +1029,23 @@ textarea.inp {
   }
 
   .present-main--split .present-split {
-    flex-direction: row;
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 36%);
     align-items: stretch;
     gap: 16px;
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 0 auto;
   }
 
-  .present-main--split .present-content--music {
-    flex: 1;
-    min-width: 0;
-  }
-
   .present-main--split .present-tab-panel {
-    flex: 0 0 min(42%, 400px);
-    max-width: 420px;
-    min-height: 0;
     border-top: none;
     border-left: 1px solid rgba(255, 255, 255, 0.12);
     padding-top: 0;
     padding-left: 16px;
+  }
+
+  .present-main--split .present-content--music {
+    min-width: 0;
   }
 
   .present-text--cifra {
