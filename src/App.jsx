@@ -130,14 +130,64 @@ export default function App() {
   }, []);
 
   const persist = async (k, v, setter) => {
-    setter(v);
+    const safe = v;
+    setter(safe);
     try {
-      await window.storage.set(k, JSON.stringify(v));
-    } catch {}
+      await window.storage.set(k, JSON.stringify(safe));
+      return true;
+    } catch (err) {
+      console.error("[storage]", k, err);
+      flash("Não foi possível salvar no servidor. Verifique a conexão e tente de novo.", true);
+      return false;
+    }
   };
-  const setLib = (v) => persist("lib", Array.isArray(v) ? v : [], setLibrary);
+
+  const setLib = (v) => {
+    if (typeof v === "function") {
+      setLibrary((prev) => {
+        const next = v(Array.isArray(prev) ? prev : []);
+        persist("lib", next, () => {});
+        return next;
+      });
+      return;
+    }
+    persist("lib", Array.isArray(v) ? v : [], setLibrary);
+  };
+
   const setCur = (v) => persist("cur", v, setSections);
-  const setReps = (v) => persist("reps", Array.isArray(v) ? v : [], setSavedReps);
+
+  const setReps = (v) => {
+    if (typeof v === "function") {
+      setSavedReps((prev) => {
+        const next = v(Array.isArray(prev) ? prev : []);
+        const safe = Array.isArray(next) ? next : [];
+        persist("reps", safe, () => {});
+        return safe;
+      });
+      return;
+    }
+    persist("reps", Array.isArray(v) ? v : [], setSavedReps);
+  };
+
+  const buildRepEntry = (name, repSections, meta = {}) => ({
+    id: meta.id || Date.now().toString(),
+    name: name.trim(),
+    date: new Date().toLocaleDateString("pt-BR"),
+    missDate: meta.missDate?.trim() || undefined,
+    missTitle: meta.missTitle?.trim() || undefined,
+    mpmSlug: meta.mpmSlug?.trim() || undefined,
+    sections: mergeRepertoire(repSections),
+  });
+
+  const upsertSavedRep = (entry) => {
+    setReps((prev) => {
+      const list = Array.isArray(prev) ? prev : [];
+      const withoutDup = list.filter(
+        (r) => !(r.missDate === entry.missDate && r.name === entry.name)
+      );
+      return [entry, ...withoutDup];
+    });
+  };
 
   const switchTab = (k) => {
     setDeletingLib(null);
@@ -358,10 +408,10 @@ export default function App() {
       semitones: 0,
     };
     if (editing) {
-      setLib(library.map((s) => (s.id === editing.id ? entry : s)));
+      setLib((prev) => prev.map((s) => (s.id === editing.id ? entry : s)));
       flash("Atualizada!");
     } else {
-      setLib([...library, entry]);
+      setLib((prev) => [...prev, entry]);
       flash("Salva na biblioteca!");
     }
     resetLibForm();
@@ -438,27 +488,37 @@ export default function App() {
     libraryEntries = [],
     missTitle,
     missDate,
+    fileName = "",
     sectionCount,
     songCount = 0,
     importToMontar = true,
     saveToLibrary = false,
   }) => {
+    const repName =
+      (missDate ? `${missTitle || "Missa"} — ${missDate}` : missTitle) ||
+      fileName.replace(/\.(pdf|docx?)$/i, "") ||
+      "";
+
     if (importToMontar && repertoire) {
-      setCur(mergeRepertoire(repertoire));
-      if (missTitle || missDate) {
-        setSaveName(missDate ? `${missTitle || "Missa"} — ${missDate}` : missTitle);
-        if (missDate) setRepMissDate(missDate);
-        if (missTitle) setRepMissTitle(missTitle);
-      }
+      const merged = mergeRepertoire(repertoire);
+      setCur(merged);
+      if (repName) setSaveName(repName);
+      if (missDate) setRepMissDate(missDate);
+      if (missTitle) setRepMissTitle(missTitle);
+
+      const saveLabel = repName || `Repertório ${new Date().toLocaleDateString("pt-BR")}`;
+      upsertSavedRep(
+        buildRepEntry(saveLabel, merged, { missDate, missTitle })
+      );
     }
 
     if (saveToLibrary && libraryEntries.length) {
-      const merged = mergeLibraryImport(library, libraryEntries);
-      setLib(merged);
+      setLib((prev) => mergeLibraryImport(prev, libraryEntries));
     }
 
     const parts = [];
     if (importToMontar) parts.push(`${sectionCount} seção(ões) na Montagem`);
+    if (importToMontar) parts.push("repertório em Salvos");
     if (saveToLibrary && songCount) parts.push(`${songCount} música(s) na biblioteca`);
 
     if (importToMontar) switchTab("build");
@@ -579,23 +639,17 @@ export default function App() {
 
   const saveRep = () => {
     if (!saveName.trim()) {
-      flash("Dê um nome", true);
+      flash("Dê um nome ao repertório (campo acima) antes de salvar", true);
       return;
     }
-    setReps([
-      {
-        id: Date.now().toString(),
-        name: saveName.trim(),
-        date: new Date().toLocaleDateString("pt-BR"),
-        missDate: repMissDate.trim() || undefined,
-        missTitle: repMissTitle.trim() || undefined,
-        mpmSlug: repMpmSlug.trim() || undefined,
-        sections: { ...sections },
-      },
-      ...savedReps,
-    ]);
-    setSaveName("");
-    flash("Repertório salvo!");
+    upsertSavedRep(
+      buildRepEntry(saveName, sections, {
+        missDate: repMissDate,
+        missTitle: repMissTitle,
+        mpmSlug: repMpmSlug,
+      })
+    );
+    flash(`"${saveName.trim()}" salvo na aba Salvos!`);
   };
 
   const repSortKey = (rep) => {
@@ -1139,7 +1193,7 @@ export default function App() {
                       <button type="button" className="btn btn-sm btn--ghost" onClick={() => downloadJson(rep, `repertorio-${rep.name.replace(/\s+/g, "-").toLowerCase()}.json`)}>Exportar</button>
                       {deletingRep === rep.id ? (
                         <>
-                          <button onClick={() => { setReps(savedReps.filter((r) => r.id !== rep.id)); setDeletingRep(null); flash("Excluído"); }} style={sm(C.danger, "#fff")}>Confirmar</button>
+                          <button onClick={() => { setReps((prev) => prev.filter((r) => r.id !== rep.id)); setDeletingRep(null); flash("Excluído"); }} style={sm(C.danger, "#fff")}>Confirmar</button>
                           <button onClick={() => setDeletingRep(null)} style={{ ...sm("none", C.textMuted), border: `1px solid ${C.border}` }}>Não</button>
                         </>
                       ) : (
