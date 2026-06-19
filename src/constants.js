@@ -22,6 +22,39 @@ export const SECTIONS = [
   { id: "final2", label: "Canto Final 2", optional: true },
 ];
 
+/** Rótulos usados na exportação .doc / .docx (como no modelo litúrgico) */
+export const EXPORT_SECTION_LABELS = {
+  refrao: "REFRÃO ORANTE",
+  entrada: "ENTRADA",
+  ato: "ATO PENITENCIAL",
+  gloria: "HINO DE LOUVOR",
+  oracao_coleta: "ORAÇÃO COLETA",
+  salmo: "SALMO RESPONSORIAL",
+  aclamacao: "ACLAMAÇÃO DO EVANGELHO",
+  ofertorio: "OFERTÓRIO",
+  oracao_oferendas: "ORAÇÃO SOBRE AS OFERENDAS",
+  santo: "SANTO",
+  oe1: "ORAÇÃO EUCARÍSTICA I",
+  oe2: "ORAÇÃO EUCARÍSTICA II",
+  oe3: "ORAÇÃO EUCARÍSTICA III",
+  oe4: "ORAÇÃO EUCARÍSTICA IV",
+  oe5: "ORAÇÃO EUCARÍSTICA V",
+  cordeiro: "CORDEIRO",
+  comunhao: "COMUNHÃO",
+  oracao_comunhao: "ORAÇÃO APÓS COMUNHÃO",
+  pos: "PÓS-COMUNHÃO",
+  final: "CANTO FINAL 1",
+  final2: "CANTO FINAL 2",
+};
+
+export const EXPORT_DOC_TITLE = "Cânticos da Missa";
+
+export function exportSectionLabel(sectionId) {
+  if (EXPORT_SECTION_LABELS[sectionId]) return EXPORT_SECTION_LABELS[sectionId];
+  const sec = SECTIONS.find((s) => s.id === sectionId);
+  return sec?.label?.toLocaleUpperCase("pt-BR") ?? sectionId.toLocaleUpperCase("pt-BR");
+}
+
 export const FONT = '"Segoe UI", system-ui, -apple-system, sans-serif';
 
 export const C = {

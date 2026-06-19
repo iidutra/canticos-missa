@@ -188,6 +188,62 @@ export function stripChordsFromLyrics(lyrics) {
     .join("\n");
 }
 
+/** Prefixos vocais / litúrgicos removidos na exportação (como no modelo) */
+const EXPORT_VOCAL_PREFIX_RE =
+  /^(?:refr[aã]o(?:\s+orante)?|ref\.?|solo|todos|coro|assembleia|pe\.?|padre|t\.?|p\.?|a\.?|c\.?|intro|final|verso|estrofe|cantor|igreja|comunidade)\s*:\s*/iu;
+
+const EXPORT_SKIP_LINE_RE =
+  /^(?:\[[^\]]+\]|──\s*.+\s*──|[─\-–—=]{2,}\s*.+\s*[─\-–—=]{2,})$/u;
+
+export function isExportSkipLine(line) {
+  return EXPORT_SKIP_LINE_RE.test(line.trim());
+}
+
+export function stripExportVocalPrefix(line) {
+  const trimmed = line.trim();
+  if (!trimmed) return "";
+  if (isExportSkipLine(trimmed)) return null;
+  const stripped = trimmed.replace(EXPORT_VOCAL_PREFIX_RE, "");
+  return stripped.trim() === "" ? null : stripped;
+}
+
+function stripChordsForExport(lyrics) {
+  if (!lyrics) return "";
+  return lyrics
+    .split("\n")
+    .map((line) => {
+      if (line.trim() === "") return "";
+      CHORD_RE.lastIndex = 0;
+      const stripped = line.replace(CHORD_RE, "").trimEnd();
+      return stripped.trim() === "" ? null : stripped;
+    })
+    .filter((line) => line !== null)
+    .join("\n");
+}
+
+function cleanLineForExport(line) {
+  if (line.trim() === "") return "";
+  const cleaned = stripExportVocalPrefix(line);
+  return cleaned === null ? null : cleaned;
+}
+
+export function lyricsForExport(lyrics) {
+  return hasChords(lyrics) ? stripChordsFromLyrics(lyrics) : lyrics;
+}
+
+/** Letras prontas para documento: sem cifras, sem prefixos vocais, quebras preservadas */
+export function prepareLyricsForExport(lyrics) {
+  if (!lyrics) return "";
+  const raw = hasChords(lyrics) ? stripChordsForExport(lyrics) : lyrics;
+  const lines = [];
+  for (const line of raw.split("\n")) {
+    const cleaned = cleanLineForExport(line);
+    if (cleaned === null) continue;
+    lines.push(cleaned);
+  }
+  return lines.join("\n").trim();
+}
+
 export function getHarmonicField(keyStr) {
   const tonic = parseKey(keyStr);
   if (tonic === null) return [];
@@ -265,8 +321,4 @@ export function initBlockWithContent(fields) {
     baseKey: key,
     semitones: 0,
   };
-}
-
-export function lyricsForExport(lyrics) {
-  return hasChords(lyrics) ? stripChordsFromLyrics(lyrics) : lyrics;
 }

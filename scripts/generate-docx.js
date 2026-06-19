@@ -4,13 +4,6 @@
  * Uso:
  *   node scripts/generate-docx.js repertorio.json
  *   node scripts/generate-docx.js repertorio.json saida.docx
- *
- * Formato do JSON (sections usa os mesmos ids da app):
- * {
- *   "sections": {
- *     "entrada": { "included": true, "songName": "...", "lyrics": "..." }
- *   }
- * }
  */
 
 import fs from "fs";
@@ -23,30 +16,8 @@ import {
   HeadingLevel,
   AlignmentType,
 } from "docx";
-
-const SECTIONS = [
-  { id: "refrao", label: "Refrão Orante" },
-  { id: "entrada", label: "Entrada" },
-  { id: "ato", label: "Ato Penitencial" },
-  { id: "gloria", label: "Hino de Louvor (Glória)" },
-  { id: "oracao_coleta", label: "Oração Coleta" },
-  { id: "salmo", label: "Salmo Responsorial" },
-  { id: "aclamacao", label: "Aclamação" },
-  { id: "ofertorio", label: "Ofertório" },
-  { id: "oracao_oferendas", label: "Oração sobre as Oferendas" },
-  { id: "santo", label: "Santo" },
-  { id: "oe1", label: "Oração Eucarística I" },
-  { id: "oe2", label: "Oração Eucarística II" },
-  { id: "oe3", label: "Oração Eucarística III" },
-  { id: "oe4", label: "Oração Eucarística IV" },
-  { id: "oe5", label: "Oração Eucarística V" },
-  { id: "cordeiro", label: "Cordeiro" },
-  { id: "comunhao", label: "Comunhão" },
-  { id: "oracao_comunhao", label: "Oração após Comunhão" },
-  { id: "pos", label: "Pós-Comunhão" },
-  { id: "final", label: "Canto Final" },
-  { id: "final2", label: "Canto Final 2" },
-];
+import { SECTIONS, EXPORT_DOC_TITLE, exportSectionLabel } from "../src/constants.js";
+import { prepareLyricsForExport } from "../src/lib/transpose.js";
 
 function lyricsToParagraphs(lyrics) {
   const paragraphs = [];
@@ -73,7 +44,7 @@ function buildDocument(data) {
       spacing: { after: 480 },
       children: [
         new TextRun({
-          text: "Cânticos da Missa",
+          text: EXPORT_DOC_TITLE,
           bold: true,
           font: "Arial",
           size: 32,
@@ -91,7 +62,7 @@ function buildDocument(data) {
         spacing: { before: 360, after: 200 },
         children: [
           new TextRun({
-            text: sec.label.toUpperCase(),
+            text: exportSectionLabel(sec.id),
             bold: true,
             font: "Arial",
             size: 24,
@@ -99,7 +70,7 @@ function buildDocument(data) {
         ],
       })
     );
-    children.push(...lyricsToParagraphs(block.lyrics.trim()));
+    children.push(...lyricsToParagraphs(prepareLyricsForExport(block.lyrics)));
   }
 
   return new Document({

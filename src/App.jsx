@@ -33,8 +33,8 @@ Eu quero te ouvir
 
 const cifraStyle = (text) =>
   hasChords(text)
-    ? { fontFamily: '"Roboto Mono", Consolas, "Courier New", monospace', fontSize: 12, lineHeight: 1.5, whiteSpace: "pre" }
-    : { lineHeight: 1.6 };
+    ? { fontFamily: '"Roboto Mono", Consolas, "Courier New", monospace', fontSize: 12, lineHeight: 1.5, whiteSpace: "pre", overflowX: "auto", maxWidth: "100%" }
+    : { lineHeight: 1.6, overflowWrap: "anywhere", wordBreak: "break-word" };
 
 export default function App() {
   const [tab, setTab] = useState("home");
@@ -935,12 +935,15 @@ export default function App() {
               return (
                 <div key={sec.id} className={`section-card${d.included && has ? " section-card--filled" : ""}`}>
                   <div className="section-card__head" onClick={() => setExpanded(open ? null : sec.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <div className="section-card__meta">
                       <input type="checkbox" checked={d.included} onChange={(e) => { e.stopPropagation(); upd(sec.id, { included: !d.included }); }} onClick={(e) => e.stopPropagation()} />
-                      <div style={{ minWidth: 0 }}>
-                        <span style={{ fontWeight: 600, fontSize: 14, color: d.included ? C.text : C.textMuted }}>{sec.label}</span>
-                        {d.songName && <span style={{ fontSize: 11, color: C.textMuted, marginLeft: 6 }}>— {d.songName}</span>}
-                        {d.key && <span style={{ fontSize: 10, color: C.search, marginLeft: 6, fontWeight: 600 }}>{d.key}</span>}
+                      <div className="section-card__info">
+                        <span className="section-card__title-line" style={{ color: d.included ? C.text : C.textMuted }}>{sec.label}</span>
+                        {(d.songName || d.key) && (
+                          <span className="section-card__sub">
+                            {d.songName}{d.songName && d.key ? " · " : ""}{d.key ? `Tom: ${d.key}` : ""}
+                          </span>
+                        )}
                       </div>
                       {has && <span style={{ background: C.successBg, color: C.success, fontSize: 10, padding: "2px 6px", borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>✓</span>}
                     </div>
@@ -1124,13 +1127,13 @@ export default function App() {
               const sl = SECTIONS.find((s) => s.id === song.category)?.label || song.category;
               return (
                 <div key={song.id} className="card" style={{ padding: 12 }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>{song.name}</span>
-                    {song.artist && <span style={{ fontSize: 12, color: C.textMuted, marginLeft: 4 }}>— {song.artist}</span>}
-                    {song.key && <span style={{ fontSize: 11, color: C.search, marginLeft: 6, fontWeight: 600 }}>Tom: {song.key}</span>}
-                    <span style={{ background: C.goldLight, color: C.nav, fontSize: 10, padding: "2px 6px", borderRadius: 4, marginLeft: 8, fontWeight: 600 }}>{sl}</span>
+                  <div className="library-song__head">
+                    <span className="library-song__title">{song.name}</span>
+                    {song.artist && <span style={{ fontSize: 12, color: C.textMuted }}>— {song.artist}</span>}
+                    {song.key && <span style={{ fontSize: 11, color: C.search, fontWeight: 600 }}>Tom: {song.key}</span>}
+                    <span style={{ background: C.goldLight, color: C.nav, fontSize: 10, padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>{sl}</span>
                   </div>
-                  <p style={{ fontSize: 12, color: C.textMuted, margin: "6px 0 8px", whiteSpace: "pre-line", maxHeight: 60, overflow: "hidden", lineHeight: 1.4 }}>{song.lyrics.substring(0, 150)}{song.lyrics.length > 150 ? "..." : ""}</p>
+                  <p className="library-song__preview">{song.lyrics.substring(0, 150)}{song.lyrics.length > 150 ? "..." : ""}</p>
                   <div className="action-grid">
                     <button type="button" className="btn btn-sm" onClick={() => useInSection(song)} style={sm(C.success, "#fff")}>Usar</button>
                     <button type="button" className="btn btn-sm btn--ghost" onClick={() => { setEditing(song); setSName(song.name); setSArtist(song.artist || ""); setSKey(song.key || ""); setSBaseLyrics(song.baseLyrics ?? song.lyrics); setSBaseKey(song.baseKey ?? song.key ?? ""); setSSemitones(song.semitones ?? 0); setSCat(song.category); setSLyrics(song.lyrics); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Editar</button>

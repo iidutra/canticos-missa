@@ -409,18 +409,34 @@ async function getPdfjs() {
 }
 
 export async function extractTextFromPdf(file) {
-  const pdfjs = await getPdfjs();
-  const data = new Uint8Array(await file.arrayBuffer());
-  const pdf = await pdfjs.getDocument({ data }).promise;
-  const pageTexts = [];
+  try {
+    const pdfjs = await getPdfjs();
+    const data = new Uint8Array(await file.arrayBuffer());
+    const pdf = await pdfjs.getDocument({ data }).promise;
+    const pageTexts = [];
 
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p);
-    const content = await page.getTextContent();
-    pageTexts.push(groupItemsIntoLines(content.items).join("\n"));
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      pageTexts.push(groupItemsIntoLines(content.items).join("\n"));
+    }
+
+    const text = pageTexts.join("\n").trim();
+    if (!text) {
+      throw new Error("O PDF não contém texto selecionável. Se for um scan/foto, exporte com OCR ou use um PDF gerado digitalmente.");
+    }
+    return text;
+  } catch (err) {
+    if (err.message?.includes("selecionável")) throw err;
+    const msg = (err?.message || "").toLowerCase();
+    if (msg.includes("password") || msg.includes("senha")) {
+      throw new Error("O PDF está protegido por senha. Remova a proteção e tente novamente.");
+    }
+    if (msg.includes("invalid") || msg.includes("corrupt") || msg.includes("format")) {
+      throw new Error("Arquivo PDF inválido ou corrompido. Tente exportar o documento novamente.");
+    }
+    throw new Error(`Não foi possível ler o PDF${err?.message ? `: ${err.message}` : ". Verifique se o arquivo abre normalmente no leitor de PDF."}`);
   }
-
-  return pageTexts.join("\n");
 }
 
 export async function extractTextFromDocx(file) {
@@ -460,6 +476,9 @@ export async function extractTextFromDocument(file) {
 
 export async function parseDocumentFile(file) {
   const text = await extractTextFromDocument(file);
+  if (!text?.trim()) {
+    throw new Error("O documento está vazio ou não foi possível extrair texto. Tente salvar como .docx ou exportar o PDF novamente.");
+  }
   const parsed = parsePdfText(text);
   return { ...parsed, rawLength: text.length, pageCount: text.split("\n\n").length };
 }

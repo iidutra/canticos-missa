@@ -1,5 +1,5 @@
-import { SECTIONS } from "../constants.js";
-import { lyricsForExport } from "./transpose.js";
+import { SECTIONS, EXPORT_DOC_TITLE, exportSectionLabel } from "../constants.js";
+import { prepareLyricsForExport } from "./transpose.js";
 
 function escapeHtml(text) {
   return text
@@ -17,6 +17,13 @@ export function downloadBlob(blob, filename) {
   URL.revokeObjectURL(a.href);
 }
 
+function lyricsToHtmlParagraphs(lyrics) {
+  return lyrics.split("\n").map((line) => {
+    if (line.trim() === "") return '<p class="g">&nbsp;</p>';
+    return `<p>${escapeHtml(line)}</p>`;
+  }).join("");
+}
+
 export function genDocHtml(sections) {
   const inc = SECTIONS.filter(
     (s) => sections[s.id]?.included && sections[s.id]?.lyrics?.trim()
@@ -26,20 +33,13 @@ export function genDocHtml(sections) {
     '<head><meta charset="utf-8"><style>' +
     "@page{size:A4;margin:2cm}body{font-family:Arial,sans-serif;font-size:11pt;color:#333;margin:2cm}" +
     "h1{font-size:16pt;font-weight:bold;text-align:center;margin-bottom:24pt}" +
-    "h2{font-size:12pt;font-weight:bold;text-transform:uppercase;margin-top:18pt;margin-bottom:10pt}" +
+    "h2{font-size:12pt;font-weight:bold;margin-top:18pt;margin-bottom:10pt}" +
     "p{margin:2pt 0;line-height:1.4}.g{margin:8pt 0}" +
-    "</style></head><body><h1>Cânticos da Missa</h1>";
+    "</style></head><body>" +
+    `<h1>${escapeHtml(EXPORT_DOC_TITLE)}</h1>`;
   inc.forEach((s) => {
-    h += `<h2>${escapeHtml(s.label)}</h2>`;
-    lyricsForExport(sections[s.id].lyrics)
-      .trim()
-      .split("\n")
-      .forEach((l) => {
-        h +=
-          l.trim() === ""
-            ? '<p class="g">&nbsp;</p>'
-            : `<p>${escapeHtml(l)}</p>`;
-      });
+    h += `<h2>${escapeHtml(exportSectionLabel(s.id))}</h2>`;
+    h += lyricsToHtmlParagraphs(prepareLyricsForExport(sections[s.id].lyrics));
   });
   h += "</body></html>";
   return h;
@@ -78,7 +78,7 @@ export async function downloadDocx(sections, filename = "canticos-da-missa.docx"
       spacing: { after: 480 },
       children: [
         new TextRun({
-          text: "Cânticos da Missa",
+          text: EXPORT_DOC_TITLE,
           bold: true,
           font: "Arial",
           size: 32,
@@ -92,7 +92,7 @@ export async function downloadDocx(sections, filename = "canticos-da-missa.docx"
         spacing: { before: 360, after: 200 },
         children: [
           new TextRun({
-            text: sec.label.toUpperCase(),
+            text: exportSectionLabel(sec.id),
             bold: true,
             font: "Arial",
             size: 24,
@@ -102,7 +102,7 @@ export async function downloadDocx(sections, filename = "canticos-da-missa.docx"
     );
     children.push(
       ...lyricsToDocxParagraphs(
-        lyricsForExport(sections[sec.id].lyrics).trim(),
+        prepareLyricsForExport(sections[sec.id].lyrics),
         Paragraph,
         TextRun
       )

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { C, FONT, SECTIONS } from "../constants.js";
+import { SECTIONS } from "../constants.js";
 import { parseDocumentFile, parsedToRepertoire, parsedToLibraryEntries, parseFilenameMeta, ACCEPT_DOCUMENTS } from "../lib/pdf-import.js";
 import { hasChords } from "../lib/transpose.js";
 
@@ -41,12 +41,16 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
     onClose();
   };
 
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
+  const pickFile = () => {
+    if (!busy) fileRef.current?.click();
+  };
+
+  const processFile = async (file) => {
     if (!file) return;
     setBusy(true);
     setError(null);
     setFileName(file.name);
+    setParsed(null);
     const fromName = parseFilenameMeta(file.name);
     try {
       const result = await parseDocumentFile(file);
@@ -59,6 +63,18 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
       setParsed(null);
     }
     setBusy(false);
+  };
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    await processFile(file);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const file = e.dataTransfer.files?.[0];
+    await processFile(file);
   };
 
   const handleImport = () => {
@@ -83,135 +99,142 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
   };
 
   const sectionLabel = (id) => SECTIONS.find((s) => s.id === id)?.label ?? id;
-  const libraryPreviewCount = parsed
-    ? parsedToLibraryEntries(parsed, sectionMap).length
-    : 0;
-
+  const libraryPreviewCount = parsed ? parsedToLibraryEntries(parsed, sectionMap).length : 0;
   const totalSongs = parsed?.sections.reduce((n, s) => n + s.songs.length, 0) ?? 0;
+  const step = !fileName ? 1 : parsed ? 3 : busy ? 2 : 2;
+  const isPdfError = error && /\.pdf$/i.test(fileName);
 
   return (
     <div className="modal-overlay" onClick={handleClose} role="dialog" aria-modal="true" aria-labelledby="pdf-import-title">
-      <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel modal-panel--import" onClick={(e) => e.stopPropagation()}>
         <div className="modal-panel__head">
-          <h2 id="pdf-import-title" style={{ margin: "0 0 4px", fontSize: 17, color: C.nav, fontFamily: FONT }}>Importar documento de cifras</h2>
-          <p style={{ margin: "0 0 12px", fontSize: 12, color: C.textMuted, lineHeight: 1.45, fontFamily: FONT }}>
-            PDF, DOC ou DOCX — detecta seções litúrgicas e pode salvar cada música na biblioteca (Entrada, Ato, Glória…) e/ou montar o repertório da missa.
+          <h2 id="pdf-import-title" className="modal-panel__title">Importar documento de cifras</h2>
+          <p className="modal-panel__desc">
+            PDF, DOC ou DOCX — detecta seções litúrgicas e pode salvar cada música na biblioteca e/ou montar o repertório da missa.
           </p>
         </div>
 
         <div className="modal-panel__body">
-          <input ref={fileRef} type="file" accept={ACCEPT_DOCUMENTS} style={{ display: "none" }} onChange={handleFile} />
+          <div className="import-steps" aria-hidden>
+            <span className={`import-step${step === 1 ? " import-step--active" : step > 1 ? " import-step--done" : ""}`}>1. Arquivo</span>
+            <span className={`import-step${step === 2 ? " import-step--active" : step > 2 ? " import-step--done" : ""}`}>2. Revisar</span>
+            <span className={`import-step${step === 3 ? " import-step--active" : ""}`}>3. Importar</span>
+          </div>
 
-          <button
-            type="button"
-            className="btn btn--block"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            style={{
-              marginBottom: 12,
-              background: C.gold,
-              color: C.nav,
-              opacity: busy ? 0.7 : 1,
-              fontFamily: FONT,
-            }}
+          <input
+            ref={fileRef}
+            type="file"
+            accept={ACCEPT_DOCUMENTS}
+            hidden
+            onChange={handleFile}
+          />
+
+          <div
+            className={`import-file-zone${busy ? " import-file-zone--busy" : ""}`}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
           >
-            {busy ? "Lendo documento…" : fileName ? `Trocar arquivo (${fileName})` : "Escolher PDF, DOC ou DOCX"}
-          </button>
+            <span className="import-file-zone__icon" aria-hidden>📄</span>
+            {fileName ? (
+              <p className="import-file-name u-truncate" title={fileName}>{fileName}</p>
+            ) : (
+              <p className="import-file-zone__hint">Toque para escolher ou arraste o arquivo aqui</p>
+            )}
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={pickFile}
+              style={{ background: "var(--c-gold)", color: "var(--c-nav)" }}
+            >
+              {busy ? "Lendo documento…" : fileName ? "Trocar arquivo" : "Escolher PDF, DOC ou DOCX"}
+            </button>
+            <p className="import-file-zone__hint">Formatos: .pdf, .doc, .docx</p>
+          </div>
 
           {error && (
-            <p style={{ color: C.danger, fontSize: 13, margin: "0 0 12px", fontFamily: FONT }}>{error}</p>
+            <div className="import-error" role="alert">
+              {error}
+              {isPdfError && (
+                <p className="import-error__tip">
+                  Dicas: use um PDF com texto selecionável (não escaneado); no celular, tente enviar o arquivo pelo gerenciador de arquivos em vez de abrir direto do WhatsApp; se for Word antigo (.doc), prefira salvar como .docx.
+                </p>
+              )}
+            </div>
           )}
 
-          {(parsed || defaultTitle || defaultDate) && (
-            <div className="form-row" style={{ marginBottom: 14 }}>
-              <label style={lbl}>
+          {(parsed || defaultTitle || defaultDate || fileName) && (
+            <div className="form-row form-row--2" style={{ marginBottom: 14 }}>
+              <label className="label-sm">
                 Missa / repertório
-                <input className="inp" value={missTitle} onChange={(e) => setMissTitle(e.target.value)} placeholder="Ex: 12º Domingo do Tempo Comum" style={{ fontFamily: FONT }} />
+                <input className="inp" value={missTitle} onChange={(e) => setMissTitle(e.target.value)} placeholder="Ex: 12º Domingo do Tempo Comum" />
               </label>
-              <label style={lbl}>
+              <label className="label-sm">
                 Data da missa
-                <input className="inp" value={missDate} onChange={(e) => setMissDate(e.target.value)} placeholder="DD/MM/AAAA" style={{ fontFamily: FONT }} />
+                <input className="inp" value={missDate} onChange={(e) => setMissDate(e.target.value)} placeholder="DD/MM/AAAA" />
               </label>
             </div>
           )}
 
           {parsed && (
             <>
-              <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, fontFamily: FONT }}>
+              <p className="import-meta">
                 {parsed.sections.length} seção(ões) · {totalSongs} música(s) detectada(s)
-              </div>
+              </p>
 
               {parsed.sections.length === 0 ? (
-                <p style={{ fontSize: 13, color: C.danger, fontFamily: FONT }}>
+                <p className="import-error">
                   Nenhuma seção litúrgica encontrada. Verifique se o documento usa títulos como Entrada, Glória, Comunhão…
                 </p>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                <div className="import-sections">
                   {parsed.sections.map((block) => (
-                    <div
-                      key={block.sectionId + block.sectionLabel}
-                      className="card"
-                      style={{ marginBottom: 0, padding: 0, overflow: "hidden" }}
-                    >
-                      <div style={{ background: C.searchBg, padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: C.search, flex: 1, minWidth: 100 }}>
-                          {block.sectionLabel}
-                        </span>
-                        <span style={{ fontSize: 11, color: C.textMuted }}>→</span>
+                    <div key={block.sectionId + block.sectionLabel} className="card import-section-card">
+                      <div className="import-section-card__head">
+                        <div className="import-section-card__row">
+                          <span className="import-section-card__label">{block.sectionLabel}</span>
+                        </div>
                         <select
-                          className="inp"
+                          className="inp import-section-card__map"
                           value={sectionMap[block.sectionId] ?? block.sectionId}
                           onChange={(e) => setSectionMap({ ...sectionMap, [block.sectionId]: e.target.value })}
-                          style={{ width: "auto", minWidth: 140, padding: "6px 8px", fontSize: 11, fontFamily: FONT, minHeight: 36 }}
+                          aria-label={`Destino da seção ${block.sectionLabel}`}
                         >
                           {SECTIONS.map((s) => (
                             <option key={s.id} value={s.id}>{s.label}</option>
                           ))}
                         </select>
                         {saveToLibrary && (
-                          <span style={{ fontSize: 10, color: C.success, fontWeight: 600, width: "100%" }}>
+                          <span className="import-section-card__hint">
                             Biblioteca: {sectionLabel(sectionMap[block.sectionId] ?? block.sectionId)}
                           </span>
                         )}
                       </div>
-                      <div style={{ padding: "8px 10px" }}>
-                        {block.songs.map((song, idx) => (
-                          <div key={idx} style={{ marginBottom: idx < block.songs.length - 1 ? 10 : 0, paddingBottom: idx < block.songs.length - 1 ? 10 : 0, borderBottom: idx < block.songs.length - 1 ? `1px dashed ${C.border}` : "none" }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2, fontFamily: FONT }}>{song.title}</div>
-                            {song.key && <div style={{ fontSize: 11, color: C.search, marginBottom: 4, fontFamily: FONT }}>Tom: {song.key}</div>}
-                            <pre
-                              style={{
-                                margin: 0,
-                                fontSize: 10,
-                                lineHeight: 1.4,
-                                maxHeight: 72,
-                                overflow: "hidden",
-                                color: C.textMuted,
-                                fontFamily: hasChords(song.lyrics) ? '"Roboto Mono", Consolas, monospace' : FONT,
-                                whiteSpace: "pre-wrap",
-                              }}
-                            >
-                              {song.lyrics.slice(0, 280)}{song.lyrics.length > 280 ? "…" : ""}
-                            </pre>
-                          </div>
-                        ))}
-                      </div>
+                      {block.songs.map((song, idx) => (
+                        <div key={idx} className="import-song">
+                          <p className="import-song__title">{song.title}</p>
+                          {song.key && <p className="import-song__key">Tom: {song.key}</p>}
+                          <pre className={`cifra-preview${hasChords(song.lyrics) ? "" : " cifra-preview--lyrics"}`}>
+                            {song.lyrics.slice(0, 320)}{song.lyrics.length > 320 ? "…" : ""}
+                          </pre>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
               )}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8, fontFamily: FONT }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+              <div className="import-options">
+                <label className="import-option">
                   <input type="checkbox" checked={saveToLibrary} onChange={(e) => setSaveToLibrary(e.target.checked)} />
-                  Salvar cada música na biblioteca (Entrada, Ato, Glória…)
+                  <span>Salvar cada música na biblioteca (Entrada, Ato, Glória…)</span>
                 </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                <label className="import-option">
                   <input type="checkbox" checked={importToMontar} onChange={(e) => setImportToMontar(e.target.checked)} />
-                  Montar repertório desta missa (aba Montar)
+                  <span>Montar repertório desta missa (aba Montar)</span>
                 </label>
                 {saveToLibrary && libraryPreviewCount > 0 && (
-                  <p style={{ margin: 0, fontSize: 11, color: C.textMuted }}>
+                  <p className="import-meta" style={{ marginBottom: 0 }}>
                     {libraryPreviewCount} música(s) serão adicionadas à biblioteca, separadas por seção.
                   </p>
                 )}
@@ -227,7 +250,7 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
             className="btn"
             disabled={!parsed?.sections?.length || busy || (!importToMontar && !saveToLibrary)}
             onClick={handleImport}
-            style={{ background: C.gold, color: C.nav, fontFamily: FONT, opacity: parsed?.sections?.length && (importToMontar || saveToLibrary) ? 1 : 0.4 }}
+            style={{ background: "var(--c-gold)", color: "var(--c-nav)" }}
           >
             {saveToLibrary && !importToMontar
               ? "Salvar na biblioteca"
@@ -240,5 +263,3 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
     </div>
   );
 }
-
-const lbl = { fontSize: 11, fontWeight: 600, color: C.textMuted, display: "block", fontFamily: FONT };
