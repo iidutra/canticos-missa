@@ -210,7 +210,7 @@ export default function PresentationMode({
     >
       <header className="present-header">
         <div className="present-header__top">
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="present-header__info">
             {slide.songName && (
               <div className="present-title">{slide.songName}</div>
             )}
@@ -228,7 +228,6 @@ export default function PresentationMode({
               {slide.key ? (
                 <span
                   style={{
-                    marginLeft: 8,
                     color: showCifra ? CC_ORANGE : "#aaa",
                     fontWeight: 600,
                   }}

@@ -872,14 +872,19 @@ textarea.inp {
   font-size: 14px;
   font-weight: 700;
   color: #f5f5f5;
-  line-height: 1.3;
+  line-height: 1.35;
+  overflow-wrap: break-word;
   word-break: break-word;
 }
 
 .present-meta {
   font-size: 11px;
   color: #aaa;
-  margin-top: 2px;
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
 }
 
 .present-header {
@@ -894,9 +899,14 @@ textarea.inp {
 
 .present-header__top {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.present-header__info {
+  min-width: 0;
+  width: 100%;
 }
 
 .present-tools {
@@ -904,6 +914,7 @@ textarea.inp {
   gap: 4px;
   flex-wrap: wrap;
   align-items: center;
+  width: 100%;
 }
 
 .present-keys {
@@ -1005,7 +1016,7 @@ textarea.inp {
 
   .present-header__top {
     flex: 1;
-    align-items: center;
+    gap: 12px;
   }
 
   .present-main {
@@ -1094,6 +1105,24 @@ textarea.inp {
 
   .present-title {
     font-size: 16px;
+  }
+
+  .present-header__top {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .present-header__info {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .present-tools {
+    width: auto;
+    flex-shrink: 0;
+    justify-content: flex-end;
   }
 }
 
