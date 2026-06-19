@@ -91,11 +91,35 @@ export default function App() {
     (async () => {
       try {
         const r = await window.storage.get("lib");
-        if (r) setLibrary(JSON.parse(r.value));
+        if (r?.value != null) {
+          let parsed;
+          try {
+            parsed = JSON.parse(r.value);
+          } catch {
+            parsed = null;
+          }
+          const lib = Array.isArray(parsed) ? parsed : [];
+          setLibrary(lib);
+          if (!Array.isArray(parsed)) {
+            await window.storage.set("lib", JSON.stringify(lib));
+          }
+        }
       } catch {}
       try {
         const r = await window.storage.get("reps");
-        if (r) setSavedReps(JSON.parse(r.value));
+        if (r?.value != null) {
+          let parsed;
+          try {
+            parsed = JSON.parse(r.value);
+          } catch {
+            parsed = null;
+          }
+          const reps = Array.isArray(parsed) ? parsed : [];
+          setSavedReps(reps);
+          if (!Array.isArray(parsed)) {
+            await window.storage.set("reps", JSON.stringify(reps));
+          }
+        }
       } catch {}
       try {
         const r = await window.storage.get("cur");
@@ -111,9 +135,9 @@ export default function App() {
       await window.storage.set(k, JSON.stringify(v));
     } catch {}
   };
-  const setLib = (v) => persist("lib", v, setLibrary);
+  const setLib = (v) => persist("lib", Array.isArray(v) ? v : [], setLibrary);
   const setCur = (v) => persist("cur", v, setSections);
-  const setReps = (v) => persist("reps", v, setSavedReps);
+  const setReps = (v) => persist("reps", Array.isArray(v) ? v : [], setSavedReps);
 
   const switchTab = (k) => {
     setDeletingLib(null);
