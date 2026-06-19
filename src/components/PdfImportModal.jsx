@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { C, FONT, SECTIONS } from "../constants.js";
-import { parseDocumentFile, parsedToRepertoire, parseFilenameMeta, ACCEPT_DOCUMENTS } from "../lib/pdf-import.js";
+import { parseDocumentFile, parsedToRepertoire, parsedToLibraryEntries, parseFilenameMeta, ACCEPT_DOCUMENTS } from "../lib/pdf-import.js";
 import { hasChords } from "../lib/transpose.js";
 
 export default function PdfImportModal({ open, onClose, onImport, defaultTitle, defaultDate }) {
@@ -12,6 +12,8 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
   const [missTitle, setMissTitle] = useState("");
   const [missDate, setMissDate] = useState("");
   const [sectionMap, setSectionMap] = useState({});
+  const [saveToLibrary, setSaveToLibrary] = useState(true);
+  const [importToMontar, setImportToMontar] = useState(true);
 
   useEffect(() => {
     if (open) {
@@ -27,6 +29,8 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
     setError(null);
     setFileName("");
     setSectionMap({});
+    setSaveToLibrary(true);
+    setImportToMontar(true);
     setMissTitle(defaultTitle || "");
     setMissDate(defaultDate || "");
     if (fileRef.current) fileRef.current.value = "";
@@ -59,16 +63,29 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
 
   const handleImport = () => {
     if (!parsed?.sections?.length) return;
-    const repertoire = parsedToRepertoire(parsed, sectionMap);
+    if (!importToMontar && !saveToLibrary) return;
+
+    const repertoire = importToMontar ? parsedToRepertoire(parsed, sectionMap) : null;
+    const libraryEntries = saveToLibrary ? parsedToLibraryEntries(parsed, sectionMap) : [];
+
     onImport({
       repertoire,
+      libraryEntries,
       missTitle: missTitle.trim(),
       missDate: missDate.trim(),
       fileName,
       sectionCount: parsed.sections.filter((s) => s.songs.length).length,
+      songCount: libraryEntries.length,
+      importToMontar,
+      saveToLibrary,
     });
     handleClose();
   };
+
+  const sectionLabel = (id) => SECTIONS.find((s) => s.id === id)?.label ?? id;
+  const libraryPreviewCount = parsed
+    ? parsedToLibraryEntries(parsed, sectionMap).length
+    : 0;
 
   const totalSongs = parsed?.sections.reduce((n, s) => n + s.songs.length, 0) ?? 0;
 
@@ -78,7 +95,7 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
         <div className="modal-panel__head">
           <h2 id="pdf-import-title" style={{ margin: "0 0 4px", fontSize: 17, color: C.nav, fontFamily: FONT }}>Importar documento de cifras</h2>
           <p style={{ margin: "0 0 12px", fontSize: 12, color: C.textMuted, lineHeight: 1.45, fontFamily: FONT }}>
-            PDF, DOC ou DOCX — o app detecta seções litúrgicas (Entrada, Glória, Comunhão…) e separa cada música.
+            PDF, DOC ou DOCX — detecta seções litúrgicas e pode salvar cada música na biblioteca (Entrada, Ato, Glória…) e/ou montar o repertório da missa.
           </p>
         </div>
 
@@ -138,7 +155,7 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
                     >
                       <div style={{ background: C.searchBg, padding: "8px 10px", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: C.search, flex: 1, minWidth: 100 }}>
-                          PDF: {block.sectionLabel}
+                          {block.sectionLabel}
                         </span>
                         <span style={{ fontSize: 11, color: C.textMuted }}>→</span>
                         <select
@@ -151,6 +168,11 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
                             <option key={s.id} value={s.id}>{s.label}</option>
                           ))}
                         </select>
+                        {saveToLibrary && (
+                          <span style={{ fontSize: 10, color: C.success, fontWeight: 600, width: "100%" }}>
+                            Biblioteca: {sectionLabel(sectionMap[block.sectionId] ?? block.sectionId)}
+                          </span>
+                        )}
                       </div>
                       <div style={{ padding: "8px 10px" }}>
                         {block.songs.map((song, idx) => (
@@ -178,6 +200,22 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
                   ))}
                 </div>
               )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8, fontFamily: FONT }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={saveToLibrary} onChange={(e) => setSaveToLibrary(e.target.checked)} />
+                  Salvar cada música na biblioteca (Entrada, Ato, Glória…)
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={importToMontar} onChange={(e) => setImportToMontar(e.target.checked)} />
+                  Montar repertório desta missa (aba Montar)
+                </label>
+                {saveToLibrary && libraryPreviewCount > 0 && (
+                  <p style={{ margin: 0, fontSize: 11, color: C.textMuted }}>
+                    {libraryPreviewCount} música(s) serão adicionadas à biblioteca, separadas por seção.
+                  </p>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -187,11 +225,15 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
           <button
             type="button"
             className="btn"
-            disabled={!parsed?.sections?.length || busy}
+            disabled={!parsed?.sections?.length || busy || (!importToMontar && !saveToLibrary)}
             onClick={handleImport}
-            style={{ background: C.gold, color: C.nav, fontFamily: FONT, opacity: parsed?.sections?.length ? 1 : 0.4 }}
+            style={{ background: C.gold, color: C.nav, fontFamily: FONT, opacity: parsed?.sections?.length && (importToMontar || saveToLibrary) ? 1 : 0.4 }}
           >
-            Importar para Montar
+            {saveToLibrary && !importToMontar
+              ? "Salvar na biblioteca"
+              : saveToLibrary && importToMontar
+                ? "Importar (Montar + Biblioteca)"
+                : "Importar para Montar"}
           </button>
         </div>
       </div>

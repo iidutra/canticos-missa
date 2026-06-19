@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { C, FONT } from "../constants.js";
 import { hasChords, parseKey, stripChordsFromLyrics } from "../lib/transpose.js";
+import {
+  loadPresentationContext,
+  loadGlobalPresentationPrefs,
+  savePresentationContext,
+} from "../lib/presentation-store.js";
 import CifraView from "./CifraView.jsx";
 import LetraView from "./LetraView.jsx";
+import TabView from "./TabView.jsx";
+import TabDrawCanvas from "./TabDrawCanvas.jsx";
 
 const CC_ORANGE = "#FF7700";
-const BG = "#0f1419";
 const CC_KEYS = [
   { semi: 9, short: "A" },
   { semi: 10, short: "Bb" },
@@ -23,18 +29,32 @@ const CC_KEYS = [
 
 export default function PresentationMode({
   slides,
+  contextKey,
   onClose,
   onTranspose,
   onSetKey,
+  onTabChange,
+  onTabDrawChange,
+  onRestoreKeys,
 }) {
   const [idx, setIdx] = useState(0);
   const [fontScale, setFontScale] = useState(1);
   const [showChords, setShowChords] = useState(true);
+  const [showTabPanel, setShowTabPanel] = useState(false);
+  const [tabEditMode, setTabEditMode] = useState("text");
+  const [tabs, setTabs] = useState({});
+  const [tabDraws, setTabDraws] = useState({});
+  const [loaded, setLoaded] = useState(false);
+  const saveTimer = useRef(null);
+  const keysSaved = useRef("");
+
   const slide = slides[idx];
   const total = slides.length;
   const hasCifra = slide ? hasChords(slide.lyrics) : false;
   const showCifra = hasCifra && showChords;
   const currentSemi = slide?.key ? parseKey(slide.key) : null;
+  const tabText = slide ? tabs[slide.id] ?? slide.percTab ?? "" : "";
+  const tabDraw = slide ? tabDraws[slide.id] ?? slide.percTabDraw ?? "" : "";
 
   const displayText =
     slide && hasCifra && !showChords
@@ -50,7 +70,94 @@ export default function PresentationMode({
   }, [total]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [ctx, globalPrefs] = await Promise.all([
+        contextKey ? loadPresentationContext(contextKey) : null,
+        loadGlobalPresentationPrefs(),
+      ]);
+      if (cancelled) return;
+
+      const initial = {};
+      const initialDraws = {};
+      slides.forEach((s) => {
+        initial[s.id] = ctx?.tabs?.[s.id] ?? s.percTab ?? "";
+        initialDraws[s.id] = ctx?.tabDraws?.[s.id] ?? s.percTabDraw ?? "";
+      });
+      setTabs(initial);
+      setTabDraws(initialDraws);
+
+      const prefView = ctx?.prefs?.viewMode ?? globalPrefs.viewMode;
+      if (prefView === "tab") {
+        setShowTabPanel(true);
+        setShowChords(true);
+      } else if (prefView === "letra") {
+        setShowChords(false);
+      } else if (prefView === "cifra") {
+        setShowChords(true);
+      }
+
+      const prefTab =
+        ctx?.prefs?.showTabPanel ?? globalPrefs.showTabPanel;
+      if (typeof prefTab === "boolean") {
+        setShowTabPanel(prefTab);
+      } else if (prefView === "tab") {
+        setShowTabPanel(true);
+      }
+
+      const prefTabMode = ctx?.prefs?.tabEditMode ?? globalPrefs.tabEditMode;
+      if (prefTabMode === "text" || prefTabMode === "draw") {
+        setTabEditMode(prefTabMode);
+      }
+
+      const prefScale = ctx?.prefs?.fontScale ?? globalPrefs.fontScale;
+      if (typeof prefScale === "number" && prefScale >= 0.6 && prefScale <= 2) {
+        setFontScale(prefScale);
+      }
+
+      if (ctx?.keys && onRestoreKeys) {
+        onRestoreKeys(ctx.keys);
+      }
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contextKey]);
+
+  useEffect(() => {
+    if (!loaded || !contextKey) return;
+    const keys = {};
+    slides.forEach((s) => {
+      if (s.key) keys[s.id] = s.key;
+    });
+    const serialized = JSON.stringify(keys);
+    if (serialized === keysSaved.current) return;
+    keysSaved.current = serialized;
+    savePresentationContext(contextKey, { keys });
+  }, [slides, loaded, contextKey]);
+
+  const scheduleSave = (partial) => {
+    if (!contextKey) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      savePresentationContext(contextKey, partial);
+    }, 400);
+  };
+
+  useEffect(() => {
+    if (!loaded || !contextKey) return;
+    const viewMode = showChords ? "cifra" : "letra";
+    scheduleSave({
+      prefs: { viewMode, showTabPanel, tabEditMode, fontScale },
+      prefsGlobal: { viewMode, showTabPanel, tabEditMode, fontScale },
+    });
+    return () => clearTimeout(saveTimer.current);
+  }, [showChords, showTabPanel, tabEditMode, fontScale, loaded, contextKey]);
+
+  useEffect(() => {
     const onKey = (e) => {
+      if (e.target.tagName === "TEXTAREA" || e.target.tagName === "CANVAS") return;
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") {
         e.preventDefault();
@@ -80,6 +187,20 @@ export default function PresentationMode({
     };
   }, []);
 
+  const handleTabEdit = (value) => {
+    if (!slide) return;
+    setTabs((prev) => ({ ...prev, [slide.id]: value }));
+    onTabChange?.(slide.id, value);
+    scheduleSave({ tabs: { [slide.id]: value } });
+  };
+
+  const handleTabDrawEdit = (value) => {
+    if (!slide) return;
+    setTabDraws((prev) => ({ ...prev, [slide.id]: value }));
+    onTabDrawChange?.(slide.id, value);
+    scheduleSave({ tabDraws: { [slide.id]: value } });
+  };
+
   if (!slide) return null;
 
   return (
@@ -89,39 +210,78 @@ export default function PresentationMode({
     >
       <header className="present-header">
         <div className="present-header__top">
-        <div style={{ minWidth: 0, flex: 1 }}>
-          {slide.songName && (
-            <div className="present-title">{slide.songName}</div>
-          )}
-          <div className="present-meta">
-            <span style={{ color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              {slide.label}
-            </span>
-            {slide.key ? (
-              <span style={{ marginLeft: 8, color: showCifra ? CC_ORANGE : "#aaa", fontWeight: 600 }}>
-                tom: {slide.key}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            {slide.songName && (
+              <div className="present-title">{slide.songName}</div>
+            )}
+            <div className="present-meta">
+              <span
+                style={{
+                  color: C.gold,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                {slide.label}
               </span>
-            ) : null}
+              {slide.key ? (
+                <span
+                  style={{
+                    marginLeft: 8,
+                    color: showCifra ? CC_ORANGE : "#aaa",
+                    fontWeight: 600,
+                  }}
+                >
+                  tom: {slide.key}
+                </span>
+              ) : null}
+            </div>
           </div>
-        </div>
-        <div className="present-tools">
-          <ToolBtn label="A−" onClick={() => setFontScale((s) => Math.max(s - 0.1, 0.6))} title="Diminuir texto (−)" />
-          <ToolBtn label="A+" onClick={() => setFontScale((s) => Math.min(s + 0.1, 2))} title="Aumentar texto (+)" />
-          {hasCifra && (
+          <div className="present-tools">
             <ToolBtn
-              label={showChords ? "♫ Cifra" : "♫ Só letra"}
-              active={showChords}
-              onClick={() => setShowChords((v) => !v)}
-              title={showChords ? "Ocultar cifras" : "Mostrar cifras"}
+              label="A−"
+              onClick={() => setFontScale((s) => Math.max(s - 0.1, 0.6))}
+              title="Diminuir texto (−)"
             />
-          )}
-          <span style={{ fontSize: 12, color: "#888", marginLeft: 4 }}>
-            {idx + 1} / {total}
-          </span>
-          <button type="button" className="btn btn-sm" onClick={onClose} style={exitBtn}>
-            Sair
-          </button>
-        </div>
+            <ToolBtn
+              label="A+"
+              onClick={() => setFontScale((s) => Math.min(s + 0.1, 2))}
+              title="Aumentar texto (+)"
+            />
+            {hasCifra && (
+              <>
+                <ToolBtn
+                  label="♫ Cifra"
+                  active={showChords}
+                  onClick={() => setShowChords(true)}
+                  title="Mostrar cifra"
+                />
+                <ToolBtn
+                  label="Só letra"
+                  active={!showChords}
+                  onClick={() => setShowChords(false)}
+                  title="Ocultar cifras"
+                />
+              </>
+            )}
+            <ToolBtn
+              label="🥁 Tab"
+              active={showTabPanel}
+              onClick={() => setShowTabPanel((v) => !v)}
+              title={
+                showTabPanel
+                  ? "Ocultar painel de percussão"
+                  : "Mostrar tab ao lado da música"
+              }
+            />
+            <span style={{ fontSize: 12, color: "#888", marginLeft: 4 }}>
+              {idx + 1} / {total}
+            </span>
+            <button type="button" className="btn btn-sm" onClick={onClose} style={exitBtn}>
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
@@ -130,7 +290,14 @@ export default function PresentationMode({
           <div className="present-keys__row">
             <KeyBtn label="−½ tom" onClick={() => onTranspose(slide.id, -1)} title="Desce meio tom" />
             <KeyBtn label="+½ tom" onClick={() => onTranspose(slide.id, 1)} title="Sobe meio tom" />
-            <span style={{ width: 1, background: "rgba(255,255,255,.15)", margin: "0 4px", alignSelf: "stretch" }} />
+            <span
+              style={{
+                width: 1,
+                background: "rgba(255,255,255,.15)",
+                margin: "0 4px",
+                alignSelf: "stretch",
+              }}
+            />
             {CC_KEYS.map((k) => (
               <KeyBtn
                 key={k.short}
@@ -144,15 +311,57 @@ export default function PresentationMode({
         </div>
       )}
 
-      <main className="present-main">
-        <div className={`present-content ${showCifra ? "present-content--cifra" : "present-content--letra"}`}>
-          {showCifra ? (
-            <CifraView
-              text={displayText}
-              className={`present-text present-text--cifra`}
-            />
-          ) : (
-            <LetraView text={displayText} className="present-text present-text--letra" liturgical={isLiturgicalSlide} />
+      <main className={`present-main${showTabPanel ? " present-main--split" : ""}`}>
+        <div className="present-split">
+          <div
+            className={`present-content present-content--music ${
+              showCifra ? "present-content--cifra" : "present-content--letra"
+            }`}
+          >
+            {showCifra ? (
+              <CifraView text={displayText} className="present-text present-text--cifra" />
+            ) : (
+              <LetraView
+                text={displayText}
+                className="present-text present-text--letra"
+                liturgical={isLiturgicalSlide}
+              />
+            )}
+          </div>
+
+          {showTabPanel && (
+            <aside className="present-tab-panel" aria-label="Tab de percussão">
+              <div className="present-tab-panel__head">
+                <span className="present-tab-panel__title">Tab — percussão</span>
+                <div className="present-tab-panel__modes">
+                  <TabModeBtn
+                    label="Texto"
+                    active={tabEditMode === "text"}
+                    onClick={() => setTabEditMode("text")}
+                  />
+                  <TabModeBtn
+                    label="Desenho"
+                    active={tabEditMode === "draw"}
+                    onClick={() => setTabEditMode("draw")}
+                  />
+                </div>
+              </div>
+              {tabEditMode === "text" ? (
+                <TabView
+                  value={tabText}
+                  onChange={handleTabEdit}
+                  className="present-text present-text--tab"
+                  fontScale={fontScale}
+                />
+              ) : (
+                <TabDrawCanvas
+                  key={slide.id}
+                  value={tabDraw}
+                  onChange={handleTabDrawEdit}
+                  className="present-tab-panel__draw"
+                />
+              )}
+            </aside>
           )}
         </div>
       </main>
@@ -178,6 +387,30 @@ export default function PresentationMode({
         </button>
       </footer>
     </div>
+  );
+}
+
+function TabModeBtn({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: "4px 10px",
+        border: `1px solid ${active ? CC_ORANGE : "rgba(255,255,255,.2)"}`,
+        borderRadius: 4,
+        background: active ? "rgba(255,119,0,.25)" : "rgba(255,255,255,.08)",
+        color: "#ddd",
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: 0.4,
+        cursor: "pointer",
+        fontFamily: FONT,
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

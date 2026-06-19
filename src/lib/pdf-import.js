@@ -324,6 +324,38 @@ export function parsedToRepertoire(parsed, sectionMap = {}) {
   return base;
 }
 
+/** Uma entrada na biblioteca por música detectada, com categoria = seção litúrgica. */
+export function parsedToLibraryEntries(parsed, sectionMap = {}) {
+  const validIds = new Set(SECTIONS.map((s) => s.id));
+  const entries = [];
+  let seq = 0;
+
+  for (const block of parsed.sections) {
+    const rawId = block.sectionId === "consagracao" ? "oe2" : block.sectionId;
+    const category = sectionMap[rawId] ?? rawId;
+    if (!validIds.has(category)) continue;
+
+    for (const song of block.songs) {
+      const name = song.title?.trim();
+      const lyrics = song.lyrics?.trim();
+      if (!name || !lyrics) continue;
+      entries.push({
+        id: `${Date.now()}-${seq++}`,
+        name,
+        artist: "",
+        key: song.key || "",
+        category,
+        lyrics,
+        baseLyrics: lyrics,
+        baseKey: song.key || "",
+        semitones: 0,
+      });
+    }
+  }
+
+  return entries;
+}
+
 function groupItemsIntoLines(items, tolerance = 3) {
   const positioned = items
     .filter((it) => it.str?.trim())

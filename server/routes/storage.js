@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAppData, setAppData, isDbEnabled } from "../db.js";
 
-const ALLOWED_KEYS = new Set(["lib", "reps", "cur"]);
+const ALLOWED_KEYS = new Set(["lib", "reps", "cur", "ptab"]);
 
 function parsePayload(body) {
   const raw = body?.value ?? body?.payload ?? body;

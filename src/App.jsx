@@ -15,7 +15,9 @@ import {
   setBlockToKey,
   syncManualEdit,
   hasChords,
+  parseKey,
 } from "./lib/transpose.js";
+import { buildPresentationContextKey } from "./lib/presentation-store.js";
 import {
   ORACOES_PROPRIAS,
   getOracaoEucaristica,
@@ -69,10 +71,16 @@ export default function App() {
   const [secFallback, setSecFallback] = useState({});
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSource, setPresentSource] = useState(null);
+  const [presentRepId, setPresentRepId] = useState(null);
+  const [presentMeta, setPresentMeta] = useState(null);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
   const [pdfDefaults, setPdfDefaults] = useState({ title: "", date: "" });
   const importLibRef = useRef(null);
   const importRepRef = useRef(null);
+  const sectionsRef = useRef(sections);
+  const presentSourceRef = useRef(presentSource);
+  sectionsRef.current = sections;
+  presentSourceRef.current = presentSource;
 
   const flash = useCallback((msg, err) => {
     setToast({ msg, err });
@@ -118,13 +126,17 @@ export default function App() {
     setCur({ ...sections, [id]: next });
   };
 
-  const updateSectionBlock = (secId, updater) => {
-    if (presentSource) {
-      setPresentSource({ ...presentSource, [secId]: updater(presentSource[secId]) });
-      return;
+  const updateSectionBlock = useCallback((secId, updater) => {
+    if (presentSourceRef.current) {
+      setPresentSource((prev) => ({ ...prev, [secId]: updater(prev[secId]) }));
+    } else {
+      const next = {
+        ...sectionsRef.current,
+        [secId]: updater(sectionsRef.current[secId]),
+      };
+      setCur(next);
     }
-    setCur({ ...sections, [secId]: updater(sections[secId]) });
-  };
+  }, []);
 
   const transposeSection = (secId, delta) => {
     updateSectionBlock(secId, (block) => transposeBlock(block, delta));
@@ -138,6 +150,26 @@ export default function App() {
     if (targetSemi === "" || Number.isNaN(targetSemi)) return;
     updateSectionBlock(secId, (block) => setBlockToKey(block, targetSemi));
   };
+
+  const updatePercTab = (secId, percTab) => {
+    updateSectionBlock(secId, (block) => ({ ...block, percTab }));
+  };
+
+  const updatePercTabDraw = (secId, percTabDraw) => {
+    updateSectionBlock(secId, (block) => ({ ...block, percTabDraw }));
+  };
+
+  const restorePresentationKeys = useCallback(
+    (keysMap) => {
+      if (!keysMap) return;
+      for (const [secId, keyStr] of Object.entries(keysMap)) {
+        const semi = parseKey(keyStr);
+        if (semi === null || semi === undefined) continue;
+        updateSectionBlock(secId, (block) => setBlockToKey(block, semi));
+      }
+    },
+    [updateSectionBlock]
+  );
 
   const libTranspose = (delta) => {
     const block = {
@@ -347,15 +379,59 @@ export default function App() {
     setPdfImportOpen(true);
   };
 
-  const handlePdfImport = ({ repertoire, missTitle, missDate, sectionCount }) => {
-    setCur(mergeRepertoire(repertoire));
-    if (missTitle || missDate) {
-      setSaveName(missDate ? `${missTitle || "Missa"} — ${missDate}` : missTitle);
-      if (missDate) setRepMissDate(missDate);
-      if (missTitle) setRepMissTitle(missTitle);
+  const mergeLibraryImport = (existing, incoming) => {
+    const byKey = new Map(
+      existing.map((s) => [`${s.category}:${s.name.trim().toLowerCase()}`, s])
+    );
+    const out = [...existing];
+    for (const entry of incoming) {
+      const key = `${entry.category}:${entry.name.trim().toLowerCase()}`;
+      const prev = byKey.get(key);
+      if (prev) {
+        const idx = out.findIndex((s) => s.id === prev.id);
+        if (idx >= 0) {
+          out[idx] = { ...entry, id: prev.id };
+        }
+      } else {
+        out.push(entry);
+        byKey.set(key, entry);
+      }
     }
-    switchTab("build");
-    flash(`${sectionCount} seção(ões) importada(s) do documento!`);
+    return out;
+  };
+
+  const handlePdfImport = ({
+    repertoire,
+    libraryEntries = [],
+    missTitle,
+    missDate,
+    sectionCount,
+    songCount = 0,
+    importToMontar = true,
+    saveToLibrary = false,
+  }) => {
+    if (importToMontar && repertoire) {
+      setCur(mergeRepertoire(repertoire));
+      if (missTitle || missDate) {
+        setSaveName(missDate ? `${missTitle || "Missa"} — ${missDate}` : missTitle);
+        if (missDate) setRepMissDate(missDate);
+        if (missTitle) setRepMissTitle(missTitle);
+      }
+    }
+
+    if (saveToLibrary && libraryEntries.length) {
+      const merged = mergeLibraryImport(library, libraryEntries);
+      setLib(merged);
+    }
+
+    const parts = [];
+    if (importToMontar) parts.push(`${sectionCount} seção(ões) na Montagem`);
+    if (saveToLibrary && songCount) parts.push(`${songCount} música(s) na biblioteca`);
+
+    if (importToMontar) switchTab("build");
+    else if (saveToLibrary) switchTab("library");
+
+    flash(parts.length ? parts.join(" · ") : "Nada importado");
   };
 
   const handleSelectMiss = ({ date, title, slug }) => {
@@ -532,19 +608,41 @@ export default function App() {
   const repFilename = (name, ext) =>
     `canticos-${name.trim().replace(/\s+/g, "-").toLowerCase().replace(/[^a-z0-9\-àáâãéêíóôõúç]/gi, "") || "missa"}${ext}`;
 
-  const openPresentation = (sourceSections = null) => {
+  const openPresentation = (sourceSections = null, repMeta = null) => {
     const src = mergeRepertoire(sourceSections ?? sections);
     if (!filledSections(src).length) {
       flash("Adicione letras primeiro", true);
       return;
     }
     setPresentSource(sourceSections ? src : null);
+    setPresentRepId(repMeta?.id ?? null);
+    setPresentMeta(
+      repMeta ?? {
+        missDate: repMissDate,
+        missTitle: repMissTitle,
+      }
+    );
     setPresentOpen(true);
   };
 
   const closePresentation = () => {
+    const src = presentSourceRef.current;
+    const repId = presentRepId;
+    if (src) {
+      if (repId) {
+        setReps((reps) =>
+          reps.map((r) =>
+            r.id === repId ? { ...r, sections: mergeRepertoire(src) } : r
+          )
+        );
+      } else {
+        setCur(mergeRepertoire(src));
+      }
+    }
     setPresentOpen(false);
     setPresentSource(null);
+    setPresentRepId(null);
+    setPresentMeta(null);
   };
 
   const genDocFor = (repSections, repName) => {
@@ -658,9 +756,19 @@ export default function App() {
           songName: block.songName,
           lyrics: block.lyrics.trim(),
           key: block.key || "",
+          percTab: block.percTab || "",
+          percTabDraw: block.percTabDraw || "",
         };
       })
     : [];
+
+  const presentationContextKey = presentOpen
+    ? buildPresentationContextKey(presentationSlides, {
+        repId: presentRepId,
+        missDate: presentMeta?.missDate ?? repMissDate,
+        missTitle: presentMeta?.missTitle ?? repMissTitle,
+      })
+    : "";
 
   return (
     <div className="app-shell" style={{ fontFamily: FONT, color: C.text }}>
@@ -670,9 +778,13 @@ export default function App() {
       {presentOpen && (
         <PresentationMode
           slides={presentationSlides}
+          contextKey={presentationContextKey}
           onClose={closePresentation}
           onTranspose={transposeSection}
           onSetKey={setSectionToKey}
+          onTabChange={updatePercTab}
+          onTabDrawChange={updatePercTabDraw}
+          onRestoreKeys={restorePresentationKeys}
         />
       )}
 
@@ -893,16 +1005,27 @@ export default function App() {
             )}
 
             {library.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <input className="inp" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Buscar na biblioteca..." style={{ ...inp, marginBottom: 8 }} />
-                <div className="toolbar-scroll">
-                  <button type="button" className="btn btn-sm" onClick={() => setCatFilter("all")} style={sm(catFilter === "all" ? C.gold : C.border, catFilter === "all" ? C.nav : C.textMuted)}>Todas</button>
+              <div className="library-filters" style={{ marginBottom: 12 }}>
+                <input className="inp" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Buscar na biblioteca..." style={inp} />
+                <label className="label-sm" htmlFor="lib-cat-filter">Seção litúrgica</label>
+                <select
+                  id="lib-cat-filter"
+                  className="inp"
+                  value={catFilter}
+                  onChange={(e) => setCatFilter(e.target.value)}
+                  style={inp}
+                >
+                  <option value="all">Todas ({library.length})</option>
                   {SECTIONS.map((s) => {
                     const n = library.filter((l) => l.category === s.id).length;
                     if (!n) return null;
-                    return <button key={s.id} type="button" className="btn btn-sm" onClick={() => setCatFilter(s.id)} style={sm(catFilter === s.id ? C.gold : C.border, catFilter === s.id ? C.nav : C.textMuted)}>{s.label} ({n})</button>;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.label} ({n})
+                      </option>
+                    );
                   })}
-                </div>
+                </select>
               </div>
             )}
 
@@ -976,7 +1099,7 @@ export default function App() {
                     {names.length > 0 && <p style={{ fontSize: 11, color: C.textMuted, margin: "2px 0 0", fontStyle: "italic" }}>{names.join(", ")}{names.length < n ? "..." : ""}</p>}
                     <div className="action-grid" style={{ marginTop: 10 }}>
                       <button type="button" className="btn btn-sm" onClick={() => { setCur(mergeRepertoire(rep.sections)); setRepMissDate(rep.missDate || ""); setRepMissTitle(rep.missTitle || ""); setRepMpmSlug(rep.mpmSlug || ""); setSaveName(rep.name); switchTab("build"); flash(`"${rep.name}" carregado`); }} style={sm(C.gold, C.nav)}>Carregar</button>
-                      <button type="button" className="btn btn-sm" onClick={() => openPresentation(rep.sections)} disabled={!n} style={sm(n ? C.nav : "#eee", n ? C.navText : "#aaa")}>▶ Apresentar</button>
+                      <button type="button" className="btn btn-sm" onClick={() => openPresentation(rep.sections, { id: rep.id, missDate: rep.missDate, missTitle: rep.missTitle })} disabled={!n} style={sm(n ? C.nav : "#eee", n ? C.navText : "#aaa")}>▶ Apresentar</button>
                       <button type="button" className="btn btn-sm" onClick={() => genDocFor(rep.sections, rep.name)} disabled={!n} style={sm(n ? C.search : "#eee", n ? "#fff" : "#aaa")}>.doc</button>
                       <button type="button" className="btn btn-sm" onClick={() => genDocxFor(rep.sections, rep.name)} disabled={!n || docBusy} style={sm(n && !docBusy ? C.search : "#eee", n && !docBusy ? "#fff" : "#aaa")}>.docx</button>
                       <button type="button" className="btn btn-sm btn--ghost" onClick={() => downloadJson(rep, `repertorio-${rep.name.replace(/\s+/g, "-").toLowerCase()}.json`)}>Exportar</button>
