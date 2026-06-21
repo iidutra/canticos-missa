@@ -1,5 +1,5 @@
 import multer from "multer";
-import { extractWordText, isWordFilename } from "./word-import.js";
+import { extractDocumentText, isDocumentFilename } from "./document-import.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -30,11 +30,15 @@ export function importApiPlugin() {
         sendJson(res, 400, { error: "Arquivo obrigatório" });
         return;
       }
-      if (!isWordFilename(req.file.originalname)) {
-        sendJson(res, 400, { error: "Envie um arquivo .doc ou .docx" });
+      if (!isDocumentFilename(req.file.originalname, req.file.mimetype)) {
+        sendJson(res, 400, { error: "Envie um arquivo PDF, DOC ou DOCX" });
         return;
       }
-      const text = await extractWordText(req.file.buffer);
+      const text = await extractDocumentText(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
       if (!text?.trim()) {
         sendJson(res, 422, { error: "Documento vazio ou ilegível" });
         return;

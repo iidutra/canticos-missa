@@ -149,7 +149,15 @@ export function parseFilenameMeta(filename) {
   return { missTitle, missDate };
 }
 
-export function documentKind(filename) {
+export function documentKind(filename, mimeType = "") {
+  const mime = (mimeType || "").toLowerCase();
+  if (mime === "application/pdf") return "pdf";
+  if (mime === "application/msword") return "doc";
+  if (
+    mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return "docx";
+  }
   const n = (filename || "").toLowerCase();
   if (n.endsWith(".pdf")) return "pdf";
   if (n.endsWith(".docx")) return "docx";
@@ -408,7 +416,19 @@ async function getPdfjs() {
   return pdfjsModule;
 }
 
-export async function extractTextFromPdf(file) {
+export async function extractTextFromDocumentApi(file) {
+  const fd = new FormData();
+  fd.append("file", file, file.name || "documento");
+  const r = await fetch("/api/import/extract-text", { method: "POST", body: fd });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.error || "Falha ao ler documento");
+  }
+  const { text } = await r.json();
+  return text;
+}
+
+export async function extractTextFromPdfClient(file) {
   try {
     const pdfjs = await getPdfjs();
     const data = new Uint8Array(await file.arrayBuffer());
@@ -439,6 +459,18 @@ export async function extractTextFromPdf(file) {
   }
 }
 
+export async function extractTextFromPdf(file) {
+  try {
+    return await extractTextFromDocumentApi(file);
+  } catch (serverErr) {
+    try {
+      return await extractTextFromPdfClient(file);
+    } catch {
+      throw serverErr;
+    }
+  }
+}
+
 export async function extractTextFromDocx(file) {
   const mammoth = await import("mammoth");
   const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
@@ -446,19 +478,11 @@ export async function extractTextFromDocx(file) {
 }
 
 export async function extractTextFromWordApi(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const r = await fetch("/api/import/extract-text", { method: "POST", body: fd });
-  if (!r.ok) {
-    const data = await r.json().catch(() => ({}));
-    throw new Error(data.error || "Falha ao ler documento Word");
-  }
-  const { text } = await r.json();
-  return text;
+  return extractTextFromDocumentApi(file);
 }
 
 export async function extractTextFromDocument(file) {
-  const kind = documentKind(file.name);
+  const kind = documentKind(file.name, file.type);
   if (!kind) throw new Error("Formato não suportado. Use PDF, DOC ou DOCX.");
 
   if (kind === "pdf") return extractTextFromPdf(file);
@@ -468,10 +492,10 @@ export async function extractTextFromDocument(file) {
       const text = await extractTextFromDocx(file);
       if (text?.trim()) return text;
     } catch {}
-    return extractTextFromWordApi(file);
+    return extractTextFromDocumentApi(file);
   }
 
-  return extractTextFromWordApi(file);
+  return extractTextFromDocumentApi(file);
 }
 
 export async function parseDocumentFile(file) {

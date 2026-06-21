@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { SECTIONS } from "../constants.js";
-import { parseDocumentFile, parsedToRepertoire, parsedToLibraryEntries, parseFilenameMeta, ACCEPT_DOCUMENTS } from "../lib/pdf-import.js";
+import { parseDocumentFile, parsedToRepertoire, parsedToLibraryEntries, parseFilenameMeta, ACCEPT_DOCUMENTS, documentKind } from "../lib/pdf-import.js";
 import { hasChords } from "../lib/transpose.js";
 
 export default function PdfImportModal({ open, onClose, onImport, defaultTitle, defaultDate }) {
@@ -47,6 +47,11 @@ export default function PdfImportModal({ open, onClose, onImport, defaultTitle, 
 
   const processFile = async (file) => {
     if (!file) return;
+    const kind = documentKind(file.name, file.type);
+    if (!kind) {
+      setError("Formato não reconhecido. Use PDF, DOC ou DOCX.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setFileName(file.name);
